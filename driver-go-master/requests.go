@@ -2,7 +2,7 @@ package main
 
 import "Driver-go/elevio"
 
-func requests_clearFloorOrders(floor int) {
+func Requests_clearFloorOrders(floor int) {
 	elevio.SetMotorDirection(elevio.MD_Stop)
 	elevio.SetButtonLamp(elevio.BT_Cab, floor, false)
 
