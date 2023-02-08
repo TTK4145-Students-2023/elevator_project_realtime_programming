@@ -7,10 +7,7 @@ import (
 
 func main() {
 
-	var orders[4]int
-
-
-	numFloors := 4
+	var orders [4]int
 
 	elevio.Init("localhost:15657", numFloors)
 
@@ -38,7 +35,7 @@ func main() {
 		//går inn i case hver gang den kommer til en floor, skal printe, sjekke calls hvis det svarer til riktig state stopper den
 		case newFloor := <-drv_floors:
 			fmt.Printf("%+v\n", elevio.GetFloor())
-			
+
 			//Fsm_onFloorArrival(elevio.GetFloor())
 			//fmt.Printf("%+v\n", a)
 			if newFloor == numFloors-1 {
@@ -48,12 +45,8 @@ func main() {
 			}
 			elevio.SetMotorDirection(d)
 			elevio.SetFloorIndicator(newFloor)
-		
+
 			//if( state order på newfloor  == state orders[newFloor])
-
-
-
-
 
 		//sjekker om døra har obstr, hvis ja holder åpen, hvis ikke tell ned fra sekunder
 		case a := <-drv_obstr:
@@ -71,7 +64,7 @@ func main() {
 			} else {
 				elevio.SetMotorDirection(d)
 			}
-			
+
 			//print
 			fmt.Printf("%+v\n", stop)
 			for f := 0; f < numFloors; f++ {
