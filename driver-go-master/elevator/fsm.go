@@ -1,13 +1,13 @@
-package main
+package elevator
 
 import (
 	"Driver-go/elevio"
 	"fmt"
 )
 
-var elevator Elevator
+var elevator = Elevator_uninitialized()
 
-func init() {
+func Fsm_init() {
 	elevator = Elevator_uninitialized()
 
 	elevio.SetFloorIndicator(elevator.floor)
@@ -88,7 +88,7 @@ func Fsm_onFloorArrival(newFloor int) {
 
 func Fsm_onDoorTimeout() {
 	//fmt.Printf("\n\n%s()\n", runtime.FuncForPC(reflect.ValueOf(fsm_onDoorTimeout).Pointer()).Name())
-	elevatorPrint(elevator)
+	//elevatorPrint(elevator)
 
 	switch elevator.behaviour {
 	case EB_DoorOpen:
@@ -102,6 +102,7 @@ func Fsm_onDoorTimeout() {
 			elevator = Requests_clearAtCurrentFloor(elevator)
 			SetAllLights(elevator)
 		case EB_Moving, EB_Idle:
+			fmt.Printf("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
 			elevio.SetDoorOpenLamp(false)
 			elevio.SetMotorDirection(elevator.dirn)
 		}

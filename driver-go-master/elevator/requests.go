@@ -1,4 +1,4 @@
-package main
+package elevator
 
 import (
 	"Driver-go/elevio"
@@ -84,10 +84,14 @@ func Requests_chooseDirection(e Elevator) DirnBehaviourPair {
 func Requests_shouldStop(e Elevator) bool {
 	switch e.dirn {
 	case elevio.MD_Down:
-		return e.requests[e.floor][elevio.BT_HallDown] || e.requests[e.floor][elevio.BT_Cab] || !Requests_below(e)
+		return e.requests[e.floor][elevio.BT_HallDown] || 
+			e.requests[e.floor][elevio.BT_Cab] || 
+			!Requests_below(e)
 
 	case elevio.MD_Up:
-		return e.requests[e.floor][elevio.BT_HallUp] || e.requests[e.floor][elevio.BT_Cab] || !Requests_above(e)
+		return e.requests[e.floor][elevio.BT_HallUp] || 
+			e.requests[e.floor][elevio.BT_Cab] || 
+			!Requests_above(e)
 
 	default:
 		return true

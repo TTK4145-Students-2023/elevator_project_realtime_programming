@@ -1,4 +1,4 @@
-package main
+package elevator
 
 import (
 	"Driver-go/elevio"
@@ -57,6 +57,7 @@ func elevatorPrint(es Elevator) {
 	fmt.Printf("  |floor = %-2d      	|\n", es.floor)
 	fmt.Printf("  |dirn  = %-12.12s|\n", DirnToString(es.dirn))
 	fmt.Printf("  |behav = %-12.12s|\n", ebToString(es.behaviour))
+	fmt.Println("  |duration = ", es.config.doorOpenDuration_s)
 	fmt.Println("  +--------------------+")
 	fmt.Println("  |  | up  | dn  | cab |")
 	for f := numFloors - 1; f >= 0; f-- {
@@ -66,7 +67,7 @@ func elevatorPrint(es Elevator) {
 				(f == 0 && btn == int(elevio.BT_HallDown)) {
 				fmt.Print("| 	")
 			} else {
-				fmt.Println("%d", es.requests[f][btn])
+				fmt.Print(es.requests[f][btn])
 			}
 		}
 		fmt.Print("|\n")
@@ -78,6 +79,7 @@ func Elevator_uninitialized() Elevator {
 	elev := Elevator{floor: -1}
 	elev.behaviour = EB_Idle
 	elev.dirn = elevio.MD_Stop
+	elev.config.doorOpenDuration_s = 3
 
 	return elev
 }
