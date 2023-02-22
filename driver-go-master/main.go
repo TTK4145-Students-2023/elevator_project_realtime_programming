@@ -26,20 +26,26 @@ func main() {
 	drv_floors := make(chan int)
 	drv_obstr := make(chan bool)
 	drv_stop := make(chan bool)
-	//drv_timer := make(chan bool)
+	//drv_timedOut := make(chan bool)
 
 	go elevio.PollButtons(drv_buttons)
 	go elevio.PollFloorSensor(drv_floors)
 	go elevio.PollObstructionSwitch(drv_obstr)
 	go elevio.PollStopButton(drv_stop)
+	//go elevator.Timer_timedOut(drv_timedOut, &elevator.TimerActive)
 
 	//input := elevioGetInputDevice()
+	var elev = elevator.Elevator_uninitialized()
 
 	if elevio.GetFloor() == -1 {
 		elevator.Fsm_onInitBetweenFloors()
+	} else {
+		elevator.Fsm_init()
 	}
 
 	//prev := [nFloors][nButtons]int{}
+
+	//timer := time.NewTimer(time.Second*3)
 
 	//lage en for select hvor drv_button sender istedet for request buttons
 	for {
@@ -52,10 +58,6 @@ func main() {
 		case button := <-drv_buttons:
 			elevator.Fsm_onRequestButtonPress(button.Floor, button.Button)
 
-			if elevator.Timer_timedOut() {
-				elevator.Timer_stop()
-				elevator.Fsm_onDoorTimeout()
-			}
 		/*
 			case timer := <-drv_timer:
 				fmt.Print(timer)
@@ -66,6 +68,14 @@ func main() {
 			if obstruction {
 				elevio.SetMotorDirection(elevio.MD_Stop)
 			}
+
+		case <-elev.Timer.C:
+			fmt.Printf("-----før timerout if---------")
+
+			elev.Timer.Stop()
+			elevator.Fsm_onDoorTimeout()
+
+			fmt.Printf("----etter if timedout")
 
 		}
 		time.Sleep(time.Duration(inputPollRateMs) * time.Millisecond)

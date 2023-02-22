@@ -3,15 +3,18 @@ package elevator
 import (
 	"Driver-go/elevio"
 	"fmt"
+	"time"
 )
 
 var elevator = Elevator_uninitialized()
 
-func Fsm_init() {
-	elevator = Elevator_uninitialized()
+func Fsm_init() Elevator {
+	//elevator = Elevator_uninitialized()
 
 	elevio.SetFloorIndicator(elevator.floor)
 	SetAllLights(elevator)
+
+	return elevator
 }
 
 func SetAllLights(es Elevator) {
@@ -35,7 +38,7 @@ func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType) {
 	switch elevator.behaviour {
 	case EB_DoorOpen:
 		if Requests_shouldClearImmediately(elevator, btnFloor, btnType) {
-			Timer_start(elevator.config.doorOpenDuration_s)
+			elevator.Timer.Reset(time.Second * 3)
 		} else {
 			elevator.requests[btnFloor][btnType] = true
 		}
@@ -49,7 +52,7 @@ func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType) {
 		switch pair.behaviour {
 		case EB_DoorOpen:
 			elevio.SetDoorOpenLamp(true)
-			Timer_start(elevator.config.doorOpenDuration_s)
+			elevator.Timer.Reset(time.Second * 3)
 			elevator = Requests_clearAtCurrentFloor(elevator)
 		case EB_Moving:
 			elevio.SetMotorDirection(elevator.dirn)
@@ -75,7 +78,8 @@ func Fsm_onFloorArrival(newFloor int) {
 			elevio.SetMotorDirection(elevio.MD_Stop)
 			elevio.SetDoorOpenLamp(true)
 			elevator = Requests_clearAtCurrentFloor(elevator)
-			Timer_start(elevator.config.doorOpenDuration_s)
+			//Timer_start(elevator.config.doorOpenDuration_s, &TimerActive)
+			elevator.Timer.Reset(time.Second * 3)
 			SetAllLights(elevator)
 			elevator.behaviour = EB_DoorOpen
 		}
@@ -88,26 +92,23 @@ func Fsm_onFloorArrival(newFloor int) {
 
 func Fsm_onDoorTimeout() {
 	//fmt.Printf("\n\n%s()\n", runtime.FuncForPC(reflect.ValueOf(fsm_onDoorTimeout).Pointer()).Name())
-	//elevatorPrint(elevator)
+	elevatorPrint(elevator)
+
+	pair := Requests_chooseDirection(elevator)
+	elevator.dirn = pair.dirn
+	elevator.behaviour = pair.behaviour
 
 	switch elevator.behaviour {
-	case EB_DoorOpen:
-		pair := Requests_chooseDirection(elevator)
-		elevator.dirn = pair.dirn
-		elevator.behaviour = pair.behaviour
-
-		switch elevator.behaviour {
-		case EB_DoorOpen:
-			Timer_start(elevator.config.doorOpenDuration_s)
-			elevator = Requests_clearAtCurrentFloor(elevator)
-			SetAllLights(elevator)
-		case EB_Moving, EB_Idle:
-			fmt.Printf("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-			elevio.SetDoorOpenLamp(false)
-			elevio.SetMotorDirection(elevator.dirn)
-		}
-	default:
-		break
+	case EB_DoorOpen: //enten obstruction eller ikke
+		//Timer_start(elevator.config.doorOpenDuration_s, &TimerActive)
+		elevator.Timer.Reset(time.Second * 3)
+		elevator = Requests_clearAtCurrentFloor(elevator)
+		SetAllLights(elevator)
+		fmt.Printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+	case EB_Moving, EB_Idle:
+		fmt.Printf("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+		elevio.SetDoorOpenLamp(false)
+		elevio.SetMotorDirection(elevator.dirn)
 	}
 
 	fmt.Println("\nNew state:")

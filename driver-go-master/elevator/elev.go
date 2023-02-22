@@ -3,6 +3,7 @@ package elevator
 import (
 	"Driver-go/elevio"
 	"fmt"
+	"time"
 )
 
 const numFloors = 4
@@ -24,6 +25,7 @@ type Elevator struct {
 	config    struct {
 		doorOpenDuration_s float64
 	}
+	Timer time.Timer
 }
 
 func ebToString(eb ElevatorBehaviour) string {
@@ -81,5 +83,6 @@ func Elevator_uninitialized() Elevator {
 	elev.dirn = elevio.MD_Stop
 	elev.config.doorOpenDuration_s = 3
 
+	elev.Timer = *time.NewTimer(time.Second * 1)
 	return elev
 }
