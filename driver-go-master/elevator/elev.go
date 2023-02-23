@@ -18,7 +18,7 @@ const (
 )
 
 type Elevator struct {
-	floor     int
+	Floor     int
 	dirn      elevio.MotorDirection
 	requests  [numFloors][numButtons]bool
 	behaviour ElevatorBehaviour
@@ -56,7 +56,7 @@ func DirnToString(direction elevio.MotorDirection) string {
 
 func elevatorPrint(es Elevator) {
 	fmt.Println("  +--------------------+")
-	fmt.Printf("  |floor = %-2d      	|\n", es.floor)
+	fmt.Printf("  |floor = %-2d      	|\n", es.Floor)
 	fmt.Printf("  |dirn  = %-12.12s|\n", DirnToString(es.dirn))
 	fmt.Printf("  |behav = %-12.12s|\n", ebToString(es.behaviour))
 	fmt.Println("  |duration = ", es.config.doorOpenDuration_s)
@@ -77,12 +77,26 @@ func elevatorPrint(es Elevator) {
 	fmt.Println("  +--------------------+")
 }
 
-func Elevator_uninitialized() Elevator {
-	elev := Elevator{floor: -1}
+func Elevator_uninitialized() *Elevator {
+	elev := new(Elevator)
+	elev.Floor = -1
 	elev.behaviour = EB_Idle
 	elev.dirn = elevio.MD_Stop
 	elev.config.doorOpenDuration_s = 3
+	//elevio.SetDoorOpenLamp(false)
 
-	elev.Timer = *time.NewTimer(time.Second * 1)
+	elev.Timer = *time.NewTimer(time.Second * 3)
+	elev.Timer.Stop()
+
 	return elev
+}
+
+func Timer_doorOpen(Timer *time.Timer) {
+
+	fmt.Printf("inne i dooropen timer")
+	//if !Timer.Stop() {
+	//	<-Timer.C
+	//}
+	Timer.Reset(time.Second * 3)
+	<-Timer.C
 }
