@@ -3,11 +3,8 @@ package elevator
 import (
 	"Driver-go/elevio"
 	"fmt"
-	"time"
 )
 
-// test
-osahfafhs
 const numFloors = 4
 const numButtons = 3
 
@@ -27,7 +24,7 @@ type Elevator struct {
 	config    struct {
 		doorOpenDuration_s float64
 	}
-	Timer time.Timer
+	doorOpen bool
 }
 
 func ebToString(eb ElevatorBehaviour) string {
@@ -62,6 +59,7 @@ func elevatorPrint(es Elevator) {
 	fmt.Printf("  |dirn  = %-12.12s|\n", DirnToString(es.dirn))
 	fmt.Printf("  |behav = %-12.12s|\n", ebToString(es.behaviour))
 	fmt.Println("  |duration = ", es.config.doorOpenDuration_s)
+	fmt.Println("  |doorOpen = ", es.doorOpen)
 	fmt.Println("  +--------------------+")
 	fmt.Println("  |  | up  | dn  | cab |")
 	for f := numFloors - 1; f >= 0; f-- {
@@ -79,26 +77,13 @@ func elevatorPrint(es Elevator) {
 	fmt.Println("  +--------------------+")
 }
 
-func Elevator_uninitialized() *Elevator {
-	elev := new(Elevator)
+func Elevator_uninitialized() Elevator {
+	var elev Elevator
 	elev.Floor = -1
 	elev.behaviour = EB_Idle
 	elev.dirn = elevio.MD_Stop
 	elev.config.doorOpenDuration_s = 3
-	//elevio.SetDoorOpenLamp(false)
-
-	elev.Timer = *time.NewTimer(time.Second * 3)
-	elev.Timer.Stop()
-
+	elevio.SetDoorOpenLamp(false)
+	elev.doorOpen = false
 	return elev
-}
-
-func Timer_doorOpen(Timer *time.Timer) {
-
-	fmt.Printf("inne i dooropen timer")
-	//if !Timer.Stop() {
-	//	<-Timer.C
-	//}
-	Timer.Reset(time.Second * 3)
-	<-Timer.C
 }

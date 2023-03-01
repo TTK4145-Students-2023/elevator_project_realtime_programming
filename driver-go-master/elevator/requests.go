@@ -9,7 +9,7 @@ type DirnBehaviourPair struct {
 	behaviour ElevatorBehaviour
 }
 
-func Requests_above(e *Elevator) bool {
+func Requests_above(e Elevator) bool {
 	for Floor := e.Floor + 1; Floor < numFloors; Floor++ {
 		for btn := 0; btn < numButtons; btn++ {
 			if e.requests[Floor][btn] { //Antar at requests har verdi 1 om bestilling og null ellers
@@ -21,7 +21,7 @@ func Requests_above(e *Elevator) bool {
 	return false
 }
 
-func Requests_below(e *Elevator) bool {
+func Requests_below(e Elevator) bool {
 	for Floor := 0; Floor < e.Floor; Floor++ {
 		for btn := 0; btn < numButtons; btn++ {
 			if e.requests[Floor][btn] {
@@ -33,7 +33,7 @@ func Requests_below(e *Elevator) bool {
 	return false
 }
 
-func Requests_here(e *Elevator) bool {
+func Requests_here(e Elevator) bool {
 
 	for btn := 0; btn < numButtons; btn++ {
 		if e.requests[e.Floor][btn] {
@@ -44,7 +44,7 @@ func Requests_here(e *Elevator) bool {
 	return false
 }
 
-func Requests_chooseDirection(e *Elevator) DirnBehaviourPair {
+func Requests_chooseDirection(e Elevator) DirnBehaviourPair {
 
 	switch e.dirn {
 	case elevio.MD_Up:
@@ -82,7 +82,7 @@ func Requests_chooseDirection(e *Elevator) DirnBehaviourPair {
 	}
 }
 
-func Requests_shouldStop(e *Elevator) bool {
+func Requests_shouldStop(e Elevator) bool {
 	switch e.dirn {
 	case elevio.MD_Down:
 		return e.requests[e.Floor][elevio.BT_HallDown] ||
@@ -104,7 +104,7 @@ func Requests_shouldClearImmediately(e Elevator, btn_Floor int, btn_type elevio.
 
 }
 
-func Requests_clearAtCurrentFloor(e *Elevator) Elevator {
+func Requests_clearAtCurrentFloor(e Elevator) Elevator {
 
 	e.requests[e.Floor][elevio.BT_Cab] = false
 	switch e.dirn {
@@ -124,7 +124,7 @@ func Requests_clearAtCurrentFloor(e *Elevator) Elevator {
 		e.requests[e.Floor][elevio.BT_HallUp] = false
 		e.requests[e.Floor][elevio.BT_HallDown] = false
 	}
-	return *e
+	return e
 }
 
 // ////////////////////////
