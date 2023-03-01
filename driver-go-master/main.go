@@ -53,13 +53,11 @@ func main() {
 		case button := <-drv_buttons:
 			elevator.Fsm_onRequestButtonPress(button.Floor, button.Button)
 
-			
-		
 		case timer := <-drv_timer:
 			fmt.Print(timer)
-	
+
 			elevator.Fsm_onDoorTimeout()
-		
+
 		case obstruction := <-drv_obstr:
 			if obstruction {
 				elevio.SetMotorDirection(elevio.MD_Stop)
