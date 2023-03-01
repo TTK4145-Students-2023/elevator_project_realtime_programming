@@ -5,15 +5,13 @@ import (
 	"fmt"
 )
 
-//var elevator = Elevator_uninitialized()
+var elevator = Elevator_uninitialized()
 
-func Fsm_init(elevator Elevator) Elevator {
+func Fsm_init() {
 	elevator = Elevator_uninitialized()
 
-	elevio.SetFloorIndicator(elevator.Floor)
+	elevio.SetFloorIndicator(elevator.floor)
 	SetAllLights(elevator)
-
-	return elevator
 }
 
 func SetAllLights(es Elevator) {
@@ -24,14 +22,13 @@ func SetAllLights(es Elevator) {
 	}
 }
 
-func Fsm_onInitBetweenFloors(elevator Elevator) Elevator{
+func Fsm_onInitBetweenFloors() {
 	elevio.SetMotorDirection(elevio.MD_Down)
 	elevator.dirn = elevio.MD_Down
 	elevator.behaviour = EB_Moving
-	return elevator
 }
 
-func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType, elevator Elevator) Elevator{
+func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType) {
 	//fmt.Printf("\n\n%s(%d, %s)\n", "fsm_onRequestButtonPress", btnFloor, btnType.ToString())
 	elevatorPrint(elevator)
 
@@ -40,8 +37,6 @@ func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType, elevator 
 		if Requests_shouldClearImmediately(elevator, btnFloor, btnType) {
 		} else {
 			elevator.requests[btnFloor][btnType] = true
-			fmt.Printf("INNE I DOOR OPEN REQ BUTTON")
-			//Fsm_onDoorTimeout(elevator)
 		}
 	case EB_Moving:
 		elevator.requests[btnFloor][btnType] = true
@@ -64,14 +59,13 @@ func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType, elevator 
 
 	fmt.Printf("\nNew state:\n")
 	elevatorPrint(elevator)
-	return elevator
 }
 
-func Fsm_onFloorArrival(newFloor int, elevator Elevator) Elevator{
+func Fsm_onFloorArrival(newFloor int) {
 	fmt.Printf("\n\n%s(%d)\n", "fsm_onFloorArrival", newFloor)
 	elevatorPrint(elevator)
 
-	elevator.Floor = newFloor
+	elevator.floor = newFloor
 
 	switch elevator.behaviour {
 	case EB_Moving:
@@ -82,21 +76,18 @@ func Fsm_onFloorArrival(newFloor int, elevator Elevator) Elevator{
 			elevator = Requests_clearAtCurrentFloor(elevator)
 			SetAllLights(elevator)
 			elevator.behaviour = EB_DoorOpen
-			fmt.Print("etter satt door open")
 		}
 	default:
 	}
 
 	fmt.Printf("\nNew state:\n")
 	elevatorPrint(elevator)
-
-	return elevator
 }
 
-func Fsm_onDoorTimeout(elevator Elevator) Elevator{
+func Fsm_onDoorTimeout() {
 	//fmt.Printf("\n\n%s()\n", runtime.FuncForPC(reflect.ValueOf(fsm_onDoorTimeout).Pointer()).Name())
-	elevatorPrint(elevator)
-	fmt.Printf("INNE I DOOR OPEN")
+	//elevatorPrint(elevator)
+
 	switch elevator.behaviour {
 	case EB_DoorOpen:
 		pair := Requests_chooseDirection(elevator)
@@ -108,6 +99,7 @@ func Fsm_onDoorTimeout(elevator Elevator) Elevator{
 			elevator = Requests_clearAtCurrentFloor(elevator)
 			SetAllLights(elevator)
 		case EB_Moving, EB_Idle:
+			fmt.Printf("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
 			elevio.SetDoorOpenLamp(false)
 			elevio.SetMotorDirection(elevator.dirn)
 		}
@@ -117,6 +109,4 @@ func Fsm_onDoorTimeout(elevator Elevator) Elevator{
 
 	fmt.Println("\nNew state:")
 	elevatorPrint(elevator)
-
-	return elevator
 }
