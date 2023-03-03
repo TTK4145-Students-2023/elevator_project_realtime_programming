@@ -99,7 +99,8 @@ func Requests_shouldStop(e Elevator) bool {
 }
 
 func Requests_shouldClearImmediately(e Elevator, btn_floor int, btn_type elevio.ButtonType) bool {
-	return e.floor == btn_floor && ((e.dirn == elevio.MD_Up && btn_type == elevio.BT_HallUp) || (e.dirn == elevio.MD_Down && btn_type == elevio.BT_HallDown) || e.dirn == elevio.MD_Stop || btn_type == elevio.BT_Cab)
+	return e.floor == btn_floor && ((e.dirn == elevio.MD_Up && btn_type == elevio.BT_HallUp) || 
+			(e.dirn == elevio.MD_Down && btn_type == elevio.BT_HallDown) || e.dirn == elevio.MD_Stop || btn_type == elevio.BT_Cab)
 
 }
 
