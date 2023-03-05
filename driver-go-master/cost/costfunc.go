@@ -23,6 +23,7 @@ func calculateCost(e *elevator.Elevator, floor int) float64 {
 
     currFloor := e.Floor
     currDir := e.Dirn
+    
 
     // Calculate distance to requested floor
     distance := math.Abs(float64(currFloor - floor))

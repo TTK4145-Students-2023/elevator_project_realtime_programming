@@ -17,7 +17,8 @@ func Fsm_init() {
 func SetAllLights(es Elevator) {
 	for floor := 0; floor < numFloors; floor++ {
 		for btn := elevio.BT_HallUp; btn < numButtons; btn++ {
-			elevio.SetButtonLamp(btn, floor, es.requests[floor][btn])
+			elevio.SetButtonLamp(btn, floor, es.requests[floor][btn].order)
+			//Vurderte individuell sjekk på cab, men fordi caben kun er intern i arrayet, så må det være denne heisens cab uansett
 		}
 	}
 }
@@ -36,12 +37,12 @@ func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType) {
 	case EB_DoorOpen:
 		if Requests_shouldClearImmediately(elevator, btnFloor, btnType) {
 		} else {
-			elevator.requests[btnFloor][btnType] = true
+			elevator.requests[btnFloor][btnType].order = true
 		}
 	case EB_Moving:
-		elevator.requests[btnFloor][btnType] = true
+		elevator.requests[btnFloor][btnType].order = true
 	case EB_Idle:
-		elevator.requests[btnFloor][btnType] = true
+		elevator.requests[btnFloor][btnType].order = true
 		pair := Requests_chooseDirection(elevator)
 		elevator.Dirn = pair.dirn
 		elevator.Behaviour = pair.behaviour
