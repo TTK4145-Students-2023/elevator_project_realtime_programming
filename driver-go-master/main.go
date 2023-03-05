@@ -56,6 +56,7 @@ func main() {
 	//  start multiple transmitters/receivers on the same port.
 	go bcast.Transmitter(16569, helloTx)
 	go bcast.Receiver(16569, helloRx)
+	//port: 16569
 
 	// The example message. We just send one of these every second.
 	go func() {
@@ -121,7 +122,12 @@ func main() {
 			elevator.Fsm_onFloorArrival(floor)
 
 		case button := <-drv_buttons:
-			elevator.Fsm_onRequestButtonPress(button.Floor, button.Button)
+			//Heis tilhørende panelet regner ut cost for alle tre heiser
+			//Broadcaster fordelt ordre (med elevatorID)
+			//Hvis CAB-order: håndter internt (ikke broadcast)
+			//CAB-order deles ikke som en ordre, men som del av heis-tilstand/info
+
+			elevator.Fsm_onRequestButtonPress(button.Floor, button.Button) //droppe denne
 
 		case timer := <-drv_timer:
 			fmt.Print(timer)
@@ -132,6 +138,12 @@ func main() {
 			if obstruction {
 				elevio.SetMotorDirection(elevio.MD_Stop)
 			}
+
+		//case: mottatt broadcast-ordre
+			//putt i array (for å stoppe ved onFloorArrival)
+			//Hvis mottatt ordre har min elevatorID:
+				//Fsm_onReq
+			
 
 		}
 		time.Sleep(time.Duration(inputPollRateMs) * time.Millisecond)

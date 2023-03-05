@@ -16,14 +16,17 @@ const (
 	EB_DoorOpen
 )
 
+type OrderpanelPair struct {
+	order      bool
+	elevatorID string
+}
+
 type Elevator struct {
 	floor     int
+	elevatorID string
 	dirn      elevio.MotorDirection
-	requests  [numFloors][numButtons]bool
+	requests  [numFloors][numButtons] OrderpanelPair
 	behaviour ElevatorBehaviour
-	config    struct {
-		doorOpenDuration_s float64
-	}
 	doorOpen bool
 }
 
@@ -58,7 +61,7 @@ func elevatorPrint(es Elevator) {
 	fmt.Printf("  |floor = %-2d      	|\n", es.floor)
 	fmt.Printf("  |dirn  = %-12.12s|\n", DirnToString(es.dirn))
 	fmt.Printf("  |behav = %-12.12s|\n", ebToString(es.behaviour))
-	fmt.Println("  |duration = ", es.config.doorOpenDuration_s)
+
 	fmt.Println("  +--------------------+")
 	fmt.Println("  |  | up  | dn  | cab |")
 	for f := numFloors - 1; f >= 0; f-- {
@@ -80,7 +83,6 @@ func Elevator_uninitialized() Elevator {
 	elev := Elevator{floor: -1}
 	elev.behaviour = EB_Idle
 	elev.dirn = elevio.MD_Stop
-	elev.config.doorOpenDuration_s = 3
 
 	return elev
 }
