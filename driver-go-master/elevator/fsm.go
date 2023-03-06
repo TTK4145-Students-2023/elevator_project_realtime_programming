@@ -5,10 +5,12 @@ import (
 	"fmt"
 )
 
-var elevator = Elevator_uninitialized()
+const MyID = "7031"
+
+var elevator = Elevator_uninitialized(MyID)
 
 func Fsm_init() {
-	elevator = Elevator_uninitialized()
+	elevator = Elevator_uninitialized(MyID)
 
 	elevio.SetFloorIndicator(elevator.Floor)
 	SetAllLights(elevator)
@@ -29,7 +31,7 @@ func Fsm_onInitBetweenFloors() {
 	elevator.Behaviour = EB_Moving
 }
 
-func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType) {
+func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType, chosenElevator string) {
 	//fmt.Printf("\n\n%s(%d, %s)\n", "fsm_onRequestButtonPress", btnFloor, btnType.ToString())
 	elevatorPrint(elevator)
 	//fmt.Println(calculateCost(&elevator, btnFloor))
@@ -39,11 +41,14 @@ func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType) {
 		if Requests_shouldClearImmediately(elevator, btnFloor, btnType) {
 		} else {
 			elevator.requests[btnFloor][btnType].order = true
+			elevator.requests[btnFloor][btnType].elevatorID = chosenElevator
 		}
 	case EB_Moving:
 		elevator.requests[btnFloor][btnType].order = true
+		elevator.requests[btnFloor][btnType].elevatorID = chosenElevator
 	case EB_Idle:
 		elevator.requests[btnFloor][btnType].order = true
+		elevator.requests[btnFloor][btnType].elevatorID = chosenElevator
 		pair := Requests_chooseDirection(elevator)
 		elevator.Dirn = pair.dirn
 		elevator.Behaviour = pair.behaviour

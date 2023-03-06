@@ -15,7 +15,6 @@ import (
 
 const nFloors = 4
 const nButtons = 3
-const myID = "1352"
 
 type HelloMsg struct {
 	Message string
@@ -57,11 +56,19 @@ func main() {
 
 	orderTx := make(chan elevator.OrderMessageStruct)
 	orderRx := make(chan elevator.OrderMessageStruct)
+
+	floorArrivalTx := make(chan elevator.FloorArrivalMessageStruct)
+	floorArrivalRx := make(chan elevator.FloorArrivalMessageStruct)
+
+	aliveTx := make(chan elevator.IAmAliveMessageStruct)
+	aliveRx := make(chan elevator.IAmAliveMessageStruct)
 	// ... and start the transmitter/receiver pair on some port
 	// These functions can take any number of channels! It is also possible to
 	//  start multiple transmitters/receivers on the same port.
-	go bcast.Transmitter(16569, orderTx)
-	go bcast.Receiver(16569, orderRx)
+	go bcast.Transmitter(16569, orderTx, aliveTx, floorArrivalTx)
+	go bcast.Receiver(16569, orderRx, aliveRx, floorArrivalRx)
+
+	go elevator.SendIAmAlive(aliveTx)
 	//port: 16569
 
 	// The example message. We just send one of these every second.
@@ -91,8 +98,8 @@ func main() {
 	fmt.Println("Started!")
 
 	dataBase := manager.ElevatorDatabase{
-		NumElevators:       3,
-		ElevatorsInNetwork: [3]elevator.Elevator{elevator.Elevator_uninitialized()},
+		Elevator1352: elevator.Elevator_uninitialized("1352"),
+		Elevator7031: elevator.Elevator_uninitialized("7031"),
 	}
 
 	inputPollRateMs := 25
@@ -129,8 +136,25 @@ func main() {
 
 		select {
 		case floor := <-drv_floors:
+			floorMsg := elevator.FloorArrivalMessageStruct{SystemID: "Gruppe10",
+				MessageID:    "Order",
+				ElevatorID:   elevator.MyID,
+				ArrivedFloor: floor}
+
+			floorArrivalTx <- floorMsg
 			fmt.Printf("%+v\n", floor)
-			elevator.Fsm_onFloorArrival(floor)
+			//elevator.Fsm_onFloorArrival(floor)
+			//send melding om ankomst til floor
+
+		case floorArrivalBroadcast := <-floorArrivalRx:
+			if floorArrivalBroadcast.ElevatorID == elevator.MyID {
+				elevator.Fsm_onFloorArrival(floorArrivalBroadcast.ArrivedFloor)
+			} else {
+				elevator.Requests_clearOnFloor(floorArrivalBroadcast.ElevatorID, floorArrivalBroadcast.ArrivedFloor)
+			}
+		//case: mottatt melding om at kommet til floor
+		//if msg.ID == MYID: fsm_onFloorArrival
+		//else Requests_clearOnFloor
 
 		case button := <-drv_buttons:
 			//Heis tilhørende panelet regner ut cost for alle tre heiser
@@ -140,7 +164,7 @@ func main() {
 			var chosenElevator string
 
 			if button.Button == elevio.BT_Cab {
-				chosenElevator = myID
+				chosenElevator = elevator.MyID
 			} else {
 				chosenElevator = manager.AssignOrderToElevator(dataBase, button)
 			}
@@ -148,7 +172,7 @@ func main() {
 			//pakk inn i melding og send
 			orderMsg := elevator.OrderMessageStruct{SystemID: "Gruppe10",
 				MessageID:      "Order",
-				ElevatorID:     myID,
+				ElevatorID:     elevator.MyID,
 				OrderedButton:  button,
 				ChosenElevator: chosenElevator}
 
@@ -168,7 +192,19 @@ func main() {
 
 		case orderBroadcast := <-orderRx:
 			fmt.Printf("Received: %#v\n", orderBroadcast)
-			elevator.Fsm_onRequestButtonPress(orderBroadcast.OrderedButton.Floor, orderBroadcast.OrderedButton.Button)
+			if (orderBroadcast.OrderedButton.Button == 2 && orderBroadcast.ChosenElevator == elevator.MyID) ||
+				orderBroadcast.OrderedButton.Button != 2 {
+				elevator.Fsm_onRequestButtonPress(orderBroadcast.OrderedButton.Floor, orderBroadcast.OrderedButton.Button, orderBroadcast.ChosenElevator)
+			}
+
+		case aliveMsg := <-aliveRx:
+			//oppdater tilhørende heis i databasestruct (dette er for å regne cost)
+			switch aliveMsg.ElevatorID {
+			case "1352":
+				dataBase.Elevator1352 = aliveMsg.Elevator
+			case "7031":
+				dataBase.Elevator7031 = aliveMsg.Elevator
+			}
 		}
 
 		//case: mottatt broadcast-ordre

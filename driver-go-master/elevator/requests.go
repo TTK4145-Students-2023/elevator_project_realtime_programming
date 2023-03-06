@@ -107,6 +107,7 @@ func Requests_shouldClearImmediately(e Elevator, btn_floor int, btn_type elevio.
 func Requests_clearAtCurrentFloor(e Elevator) Elevator {
 	//Tanken: Alle går på heisen som stopper, så ordre må cleares uansett fordeling
 	e.requests[e.Floor][elevio.BT_Cab].order = false
+	e.requests[e.Floor][elevio.BT_Cab].elevatorID = ""
 	switch e.Dirn {
 	case elevio.MD_Up:
 		if !Requests_above(e) && !e.requests[e.Floor][elevio.BT_HallUp].order {
@@ -132,6 +133,23 @@ func Requests_clearAtCurrentFloor(e Elevator) Elevator {
 	}
 	return e
 }
+
+func Requests_clearOnFloor(arrivedElevatorID string, floor int) {
+	if elevator.requests[floor][elevio.BT_HallDown].order &&
+		(arrivedElevatorID == elevator.requests[floor][elevio.BT_HallDown].elevatorID) {
+		elevator.requests[floor][elevio.BT_HallDown].order = false
+		elevator.requests[floor][elevio.BT_HallDown].elevatorID = ""
+	} else if elevator.requests[floor][elevio.BT_HallUp].order &&
+		(arrivedElevatorID == elevator.requests[floor][elevio.BT_HallUp].elevatorID) {
+		elevator.requests[floor][elevio.BT_HallUp].order = false
+		elevator.requests[floor][elevio.BT_HallUp].elevatorID = ""
+	}
+	SetAllLights(elevator)
+}
+
+/*func AddRequest(button elevio.ButtonEvent, chosenElevator string, e Elevator) {
+	ele
+}*/
 
 // ////////////////////////
 /*func Requests_clearFloorOrders(floor int) {

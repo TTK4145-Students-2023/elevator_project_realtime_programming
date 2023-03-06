@@ -79,11 +79,11 @@ func elevatorPrint(es Elevator) {
 	fmt.Println("  +--------------------+")
 }
 
-func Elevator_uninitialized() Elevator {
+func Elevator_uninitialized(myID string) Elevator {
 	elev := Elevator{Floor: -1}
 	elev.Behaviour = EB_Idle
 	elev.Dirn = elevio.MD_Stop
-	elev.ElevatorID = ""
+	elev.ElevatorID = myID
 
 	return elev
 }
