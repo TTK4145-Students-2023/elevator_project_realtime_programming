@@ -56,11 +56,16 @@ func main() {
 
 	orderTx := make(chan elevator.OrderMessageStruct)
 	orderRx := make(chan elevator.OrderMessageStruct)
+
+	aliveTx := make(chan elevator.IAmAliveMessageStruct)
+	aliveRx := make(chan elevator.IAmAliveMessageStruct)
 	// ... and start the transmitter/receiver pair on some port
 	// These functions can take any number of channels! It is also possible to
 	//  start multiple transmitters/receivers on the same port.
-	go bcast.Transmitter(16569, orderTx)
-	go bcast.Receiver(16569, orderRx)
+	go bcast.Transmitter(16569, orderTx, aliveTx)
+	go bcast.Receiver(16569, orderRx, aliveRx)
+
+	go elevator.SendIAmAlive(aliveTx)
 	//port: 16569
 
 	// The example message. We just send one of these every second.
@@ -90,8 +95,8 @@ func main() {
 	fmt.Println("Started!")
 
 	dataBase := manager.ElevatorDatabase{
-		NumElevators:       3,
-		ElevatorsInNetwork: [3]elevator.Elevator{elevator.Elevator_uninitialized(elevator.MyID)},
+		Elevator1352: elevator.Elevator_uninitialized("1352"),
+		Elevator7031: elevator.Elevator_uninitialized("7031"),
 	}
 
 	inputPollRateMs := 25
@@ -172,6 +177,14 @@ func main() {
 				elevator.Fsm_onRequestButtonPress(orderBroadcast.OrderedButton.Floor, orderBroadcast.OrderedButton.Button, orderBroadcast.ChosenElevator)
 			}
 
+		case aliveMsg := <-aliveRx:
+			//oppdater tilhørende heis i databasestruct (dette er for å regne cost)
+			switch aliveMsg.ElevatorID {
+			case "1352":
+				dataBase.Elevator1352 = aliveMsg.Elevator
+			case "7031":
+				dataBase.Elevator7031 = aliveMsg.Elevator
+			}
 		}
 
 		//case: mottatt broadcast-ordre

@@ -1,6 +1,9 @@
 package elevator
 
-import "Driver-go/elevio"
+import (
+	"Driver-go/elevio"
+	"time"
+)
 
 type OrderMessageStruct struct {
 	SystemID   string
@@ -15,9 +18,22 @@ type OrderMessageStruct struct {
 }
 
 type IAmAliveMessageStruct struct {
-	systemID   string
-	messageID  string
-	elevatorID string
+	SystemID   string
+	MessageID  string
+	ElevatorID string
 
-	elevator Elevator
+	Elevator Elevator
+}
+
+// The example message. We just send one of these every second.
+func SendIAmAlive(aliveTx chan IAmAliveMessageStruct) {
+	aliveMsg := IAmAliveMessageStruct{SystemID: "Gruppe10",
+		MessageID:  "Alive",
+		ElevatorID: MyID,
+		Elevator:   elevator}
+	for {
+		aliveMsg.Elevator = elevator //oppdaterer heismelding
+		aliveTx <- aliveMsg
+		time.Sleep(1 * time.Second)
+	}
 }
