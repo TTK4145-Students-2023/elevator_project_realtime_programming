@@ -17,6 +17,16 @@ type OrderMessageStruct struct {
 	ChosenElevator string
 }
 
+type FloorArrivalMessageStruct struct {
+	SystemID   string
+	MessageID  string
+	ElevatorID string
+
+	//orderCounter int
+
+	ArrivedFloor int
+}
+
 type IAmAliveMessageStruct struct {
 	SystemID   string
 	MessageID  string

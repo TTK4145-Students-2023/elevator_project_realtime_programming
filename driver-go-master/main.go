@@ -57,13 +57,16 @@ func main() {
 	orderTx := make(chan elevator.OrderMessageStruct)
 	orderRx := make(chan elevator.OrderMessageStruct)
 
+	floorArrivalTx := make(chan elevator.FloorArrivalMessageStruct)
+	floorArrivalRx := make(chan elevator.FloorArrivalMessageStruct)
+
 	aliveTx := make(chan elevator.IAmAliveMessageStruct)
 	aliveRx := make(chan elevator.IAmAliveMessageStruct)
 	// ... and start the transmitter/receiver pair on some port
 	// These functions can take any number of channels! It is also possible to
 	//  start multiple transmitters/receivers on the same port.
-	go bcast.Transmitter(16569, orderTx, aliveTx)
-	go bcast.Receiver(16569, orderRx, aliveRx)
+	go bcast.Transmitter(16569, orderTx, aliveTx, floorArrivalTx)
+	go bcast.Receiver(16569, orderRx, aliveRx, floorArrivalRx)
 
 	go elevator.SendIAmAlive(aliveTx)
 	//port: 16569
@@ -133,8 +136,25 @@ func main() {
 
 		select {
 		case floor := <-drv_floors:
+			floorMsg := elevator.FloorArrivalMessageStruct{SystemID: "Gruppe10",
+				MessageID:    "Order",
+				ElevatorID:   elevator.MyID,
+				ArrivedFloor: floor}
+
+			floorArrivalTx <- floorMsg
 			fmt.Printf("%+v\n", floor)
-			elevator.Fsm_onFloorArrival(floor)
+			//elevator.Fsm_onFloorArrival(floor)
+			//send melding om ankomst til floor
+
+		case floorArrivalBroadcast := <-floorArrivalRx:
+			if floorArrivalBroadcast.ElevatorID == elevator.MyID {
+				elevator.Fsm_onFloorArrival(floorArrivalBroadcast.ArrivedFloor)
+			} else {
+				elevator.Requests_clearOnFloor(floorArrivalBroadcast.ElevatorID, floorArrivalBroadcast.ArrivedFloor)
+			}
+		//case: mottatt melding om at kommet til floor
+		//if msg.ID == MYID: fsm_onFloorArrival
+		//else Requests_clearOnFloor
 
 		case button := <-drv_buttons:
 			//Heis tilhørende panelet regner ut cost for alle tre heiser

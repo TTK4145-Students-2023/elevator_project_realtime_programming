@@ -134,6 +134,16 @@ func Requests_clearAtCurrentFloor(e Elevator) Elevator {
 	return e
 }
 
+func Requests_clearOnFloor(arrivedElevatorID string, floor int) {
+	if elevator.requests[floor][elevio.BT_HallDown].order && 
+	(arrivedElevatorID == elevator.requests[floor][elevio.BT_HallDown].elevatorID) {
+		Requests_clearAtCurrentFloor(elevator)
+	} else if elevator.requests[floor][elevio.BT_HallUp].order && 
+	(arrivedElevatorID == elevator.requests[floor][elevio.BT_HallUp].elevatorID) {
+		Requests_clearAtCurrentFloor(elevator)
+	}
+}
+
 /*func AddRequest(button elevio.ButtonEvent, chosenElevator string, e Elevator) {
 	ele
 }*/
