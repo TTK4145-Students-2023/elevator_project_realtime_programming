@@ -154,7 +154,7 @@ func main() {
 
 			orderTx <- orderMsg
 
-			elevator.Fsm_onRequestButtonPress(button.Floor, button.Button) //droppe denne
+			//elevator.Fsm_onRequestButtonPress(button.Floor, button.Button) //droppe denne
 
 		case timer := <-drv_timer:
 			fmt.Print(timer)
@@ -168,6 +168,7 @@ func main() {
 
 		case orderBroadcast := <-orderRx:
 			fmt.Printf("Received: %#v\n", orderBroadcast)
+			elevator.Fsm_onRequestButtonPress(orderBroadcast.OrderedButton.Floor, orderBroadcast.OrderedButton.Button)
 		}
 
 		//case: mottatt broadcast-ordre
