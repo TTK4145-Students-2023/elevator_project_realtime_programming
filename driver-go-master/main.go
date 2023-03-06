@@ -128,7 +128,7 @@ func main() {
 			//Hvis CAB-order: håndter internt (ikke broadcast)
 			//CAB-order deles ikke som en ordre, men som del av heis-tilstand/info
 
-			//funskjon som kalkulere cost på alle tre heiser
+			//funskjon som kalkulere cost på alle
 
 			elevator.Fsm_onRequestButtonPress(button.Floor, button.Button) //droppe denne
 
