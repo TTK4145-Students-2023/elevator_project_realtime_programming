@@ -16,15 +16,18 @@ const (
 	EB_DoorOpen
 )
 
+type OrderpanelPair struct {
+	order      bool
+	elevatorID string
+}
+
 type Elevator struct {
-	floor     int
-	dirn      elevio.MotorDirection
-	requests  [numFloors][numButtons]bool
-	behaviour ElevatorBehaviour
-	config    struct {
-		doorOpenDuration_s float64
-	}
-	doorOpen bool
+	Floor      int
+	ElevatorID string
+	Dirn       elevio.MotorDirection
+	requests   [numFloors][numButtons]OrderpanelPair
+	Behaviour  ElevatorBehaviour
+	DoorOpen   bool
 }
 
 func ebToString(eb ElevatorBehaviour) string {
@@ -55,10 +58,10 @@ func DirnToString(direction elevio.MotorDirection) string {
 
 func elevatorPrint(es Elevator) {
 	fmt.Println("  +--------------------+")
-	fmt.Printf("  |floor = %-2d      	|\n", es.floor)
-	fmt.Printf("  |dirn  = %-12.12s|\n", DirnToString(es.dirn))
-	fmt.Printf("  |behav = %-12.12s|\n", ebToString(es.behaviour))
-	fmt.Println("  |duration = ", es.config.doorOpenDuration_s)
+	fmt.Printf("  |floor = %-2d      	|\n", es.Floor)
+	fmt.Printf("  |dirn  = %-12.12s|\n", DirnToString(es.Dirn))
+	fmt.Printf("  |behav = %-12.12s|\n", ebToString(es.Behaviour))
+
 	fmt.Println("  +--------------------+")
 	fmt.Println("  |  | up  | dn  | cab |")
 	for f := numFloors - 1; f >= 0; f-- {
@@ -77,10 +80,10 @@ func elevatorPrint(es Elevator) {
 }
 
 func Elevator_uninitialized() Elevator {
-	elev := Elevator{floor: -1}
-	elev.behaviour = EB_Idle
-	elev.dirn = elevio.MD_Stop
-	elev.config.doorOpenDuration_s = 3
+	elev := Elevator{Floor: -1}
+	elev.Behaviour = EB_Idle
+	elev.Dirn = elevio.MD_Stop
+	elev.ElevatorID = ""
 
 	return elev
 }

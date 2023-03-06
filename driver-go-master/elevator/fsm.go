@@ -10,47 +10,49 @@ var elevator = Elevator_uninitialized()
 func Fsm_init() {
 	elevator = Elevator_uninitialized()
 
-	elevio.SetFloorIndicator(elevator.floor)
+	elevio.SetFloorIndicator(elevator.Floor)
 	SetAllLights(elevator)
 }
 
 func SetAllLights(es Elevator) {
 	for floor := 0; floor < numFloors; floor++ {
 		for btn := elevio.BT_HallUp; btn < numButtons; btn++ {
-			elevio.SetButtonLamp(btn, floor, es.requests[floor][btn])
+			elevio.SetButtonLamp(btn, floor, es.requests[floor][btn].order)
+			//Vurderte individuell sjekk på cab, men fordi caben kun er intern i arrayet, så må det være denne heisens cab uansett
 		}
 	}
 }
 
 func Fsm_onInitBetweenFloors() {
 	elevio.SetMotorDirection(elevio.MD_Down)
-	elevator.dirn = elevio.MD_Down
-	elevator.behaviour = EB_Moving
+	elevator.Dirn = elevio.MD_Down
+	elevator.Behaviour = EB_Moving
 }
 
 func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType) {
 	//fmt.Printf("\n\n%s(%d, %s)\n", "fsm_onRequestButtonPress", btnFloor, btnType.ToString())
 	elevatorPrint(elevator)
+	//fmt.Println(calculateCost(&elevator, btnFloor))
 
-	switch elevator.behaviour {
+	switch elevator.Behaviour {
 	case EB_DoorOpen:
 		if Requests_shouldClearImmediately(elevator, btnFloor, btnType) {
 		} else {
-			elevator.requests[btnFloor][btnType] = true
+			elevator.requests[btnFloor][btnType].order = true
 		}
 	case EB_Moving:
-		elevator.requests[btnFloor][btnType] = true
+		elevator.requests[btnFloor][btnType].order = true
 	case EB_Idle:
-		elevator.requests[btnFloor][btnType] = true
+		elevator.requests[btnFloor][btnType].order = true
 		pair := Requests_chooseDirection(elevator)
-		elevator.dirn = pair.dirn
-		elevator.behaviour = pair.behaviour
+		elevator.Dirn = pair.dirn
+		elevator.Behaviour = pair.behaviour
 		switch pair.behaviour {
 		case EB_DoorOpen:
 			elevio.SetDoorOpenLamp(true)
 			elevator = Requests_clearAtCurrentFloor(elevator)
 		case EB_Moving:
-			elevio.SetMotorDirection(elevator.dirn)
+			elevio.SetMotorDirection(elevator.Dirn)
 		case EB_Idle:
 		}
 	}
@@ -65,17 +67,17 @@ func Fsm_onFloorArrival(newFloor int) {
 	fmt.Printf("\n\n%s(%d)\n", "fsm_onFloorArrival", newFloor)
 	elevatorPrint(elevator)
 
-	elevator.floor = newFloor
+	elevator.Floor = newFloor
 
-	switch elevator.behaviour {
+	switch elevator.Behaviour {
 	case EB_Moving:
 		if Requests_shouldStop(elevator) {
 			elevio.SetMotorDirection(elevio.MD_Stop)
 			elevio.SetDoorOpenLamp(true)
-			elevator.doorOpen = true
+			elevator.DoorOpen = true
 			elevator = Requests_clearAtCurrentFloor(elevator)
 			SetAllLights(elevator)
-			elevator.behaviour = EB_DoorOpen
+			elevator.Behaviour = EB_DoorOpen
 		}
 	default:
 	}
@@ -88,20 +90,20 @@ func Fsm_onDoorTimeout() {
 	//fmt.Printf("\n\n%s()\n", runtime.FuncForPC(reflect.ValueOf(fsm_onDoorTimeout).Pointer()).Name())
 	//elevatorPrint(elevator)
 
-	switch elevator.behaviour {
+	switch elevator.Behaviour {
 	case EB_DoorOpen:
 		pair := Requests_chooseDirection(elevator)
-		elevator.dirn = pair.dirn
-		elevator.behaviour = pair.behaviour
+		elevator.Dirn = pair.dirn
+		elevator.Behaviour = pair.behaviour
 
-		switch elevator.behaviour {
+		switch elevator.Behaviour {
 		case EB_DoorOpen:
 			elevator = Requests_clearAtCurrentFloor(elevator)
 			SetAllLights(elevator)
 		case EB_Moving, EB_Idle:
 			fmt.Printf("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
 			elevio.SetDoorOpenLamp(false)
-			elevio.SetMotorDirection(elevator.dirn)
+			elevio.SetMotorDirection(elevator.Dirn)
 		}
 	default:
 		break

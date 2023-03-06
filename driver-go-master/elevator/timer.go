@@ -10,11 +10,11 @@ var timerActive bool
 
 func Timer_runTimer(receiver chan<- bool) {
 	for {
-		if elevator.doorOpen {
+		if elevator.DoorOpen {
 			timer := time.NewTimer(3 * time.Second)
 			<-timer.C
 			receiver <- true
-			elevator.doorOpen = false
+			elevator.DoorOpen = false
 		}
 	}
 	//OBS! Mangler håndtering av obstruksjon
