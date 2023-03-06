@@ -32,6 +32,7 @@ func Fsm_onInitBetweenFloors() {
 func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType) {
 	//fmt.Printf("\n\n%s(%d, %s)\n", "fsm_onRequestButtonPress", btnFloor, btnType.ToString())
 	elevatorPrint(elevator)
+	//fmt.Println(calculateCost(&elevator, btnFloor))
 
 	switch elevator.Behaviour {
 	case EB_DoorOpen:
@@ -73,7 +74,7 @@ func Fsm_onFloorArrival(newFloor int) {
 		if Requests_shouldStop(elevator) {
 			elevio.SetMotorDirection(elevio.MD_Stop)
 			elevio.SetDoorOpenLamp(true)
-			elevator.doorOpen = true
+			elevator.DoorOpen = true
 			elevator = Requests_clearAtCurrentFloor(elevator)
 			SetAllLights(elevator)
 			elevator.Behaviour = EB_DoorOpen

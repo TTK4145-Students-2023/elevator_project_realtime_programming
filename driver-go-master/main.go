@@ -23,6 +23,7 @@ type HelloMsg struct {
 func main() {
 	// Our id can be anything. Here we pass it on the command line, using
 	//  `go run main.go -id=our_id`
+
 	var id string
 	flag.StringVar(&id, "id", "", "id of this peer")
 	flag.Parse()
@@ -127,6 +128,8 @@ func main() {
 			//Hvis CAB-order: håndter internt (ikke broadcast)
 			//CAB-order deles ikke som en ordre, men som del av heis-tilstand/info
 
+			//funskjon som kalkulere cost på alle tre heiser
+
 			elevator.Fsm_onRequestButtonPress(button.Floor, button.Button) //droppe denne
 
 		case timer := <-drv_timer:
@@ -139,11 +142,10 @@ func main() {
 				elevio.SetMotorDirection(elevio.MD_Stop)
 			}
 
-		//case: mottatt broadcast-ordre
+			//case: mottatt broadcast-ordre
 			//putt i array (for å stoppe ved onFloorArrival)
 			//Hvis mottatt ordre har min elevatorID:
-				//Fsm_onReq
-			
+			//Fsm_onReq
 
 		}
 		time.Sleep(time.Duration(inputPollRateMs) * time.Millisecond)

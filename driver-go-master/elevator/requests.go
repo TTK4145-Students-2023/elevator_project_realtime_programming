@@ -36,7 +36,7 @@ func Requests_below(e Elevator) bool {
 func Requests_here(e Elevator) bool {
 
 	for btn := 0; btn < numButtons; btn++ {
-		if e.requests[e.floor][btn].order && e.requests[e.floor][btn].elevatorID == e.elevatorID {
+		if e.requests[e.Floor][btn].order && e.requests[e.Floor][btn].elevatorID == e.elevatorID {
 			return true
 		}
 	}
@@ -84,13 +84,13 @@ func Requests_chooseDirection(e Elevator) DirnBehaviourPair {
 func Requests_shouldStop(e Elevator) bool {
 	switch e.Dirn {
 	case elevio.MD_Down:
-		return e.requests[e.floor][elevio.BT_HallDown].order ||
-			e.requests[e.floor][elevio.BT_Cab].order ||
+		return e.requests[e.Floor][elevio.BT_HallDown].order ||
+			e.requests[e.Floor][elevio.BT_Cab].order ||
 			!Requests_below(e) //mulig vi må legge til ID-sjekk
 
 	case elevio.MD_Up:
-		return e.requests[e.floor][elevio.BT_HallUp].order ||
-			e.requests[e.floor][elevio.BT_Cab].order ||
+		return e.requests[e.Floor][elevio.BT_HallUp].order ||
+			e.requests[e.Floor][elevio.BT_Cab].order ||
 			!Requests_above(e)
 
 	default:
@@ -99,36 +99,36 @@ func Requests_shouldStop(e Elevator) bool {
 }
 
 func Requests_shouldClearImmediately(e Elevator, btn_floor int, btn_type elevio.ButtonType) bool {
-	return e.floor == btn_floor && ((e.dirn == elevio.MD_Up && btn_type == elevio.BT_HallUp) ||
-		(e.dirn == elevio.MD_Down && btn_type == elevio.BT_HallDown) || e.dirn == elevio.MD_Stop || btn_type == elevio.BT_Cab)
+	return e.Floor == btn_floor && ((e.Dirn == elevio.MD_Up && btn_type == elevio.BT_HallUp) ||
+		(e.Dirn == elevio.MD_Down && btn_type == elevio.BT_HallDown) || e.Dirn == elevio.MD_Stop || btn_type == elevio.BT_Cab)
 
 }
 
 func Requests_clearAtCurrentFloor(e Elevator) Elevator {
 	//Tanken: Alle går på heisen som stopper, så ordre må cleares uansett fordeling
-	e.requests[e.floor][elevio.BT_Cab].order = false
-	switch e.dirn {
+	e.requests[e.Floor][elevio.BT_Cab].order = false
+	switch e.Dirn {
 	case elevio.MD_Up:
-		if !Requests_above(e) && !e.requests[e.floor][elevio.BT_HallUp].order {
-			e.requests[e.floor][elevio.BT_HallDown].order = false
-			e.requests[e.floor][elevio.BT_HallDown].elevatorID = ""
+		if !Requests_above(e) && !e.requests[e.Floor][elevio.BT_HallUp].order {
+			e.requests[e.Floor][elevio.BT_HallDown].order = false
+			e.requests[e.Floor][elevio.BT_HallDown].elevatorID = ""
 		}
-		e.requests[e.floor][elevio.BT_HallUp].order = false
-		e.requests[e.floor][elevio.BT_HallUp].elevatorID = ""
+		e.requests[e.Floor][elevio.BT_HallUp].order = false
+		e.requests[e.Floor][elevio.BT_HallUp].elevatorID = ""
 	case elevio.MD_Down:
-		if !Requests_below(e) && !e.requests[e.floor][elevio.BT_HallDown].order {
-			e.requests[e.floor][elevio.BT_HallUp].order = false
-			e.requests[e.floor][elevio.BT_HallUp].elevatorID = ""
+		if !Requests_below(e) && !e.requests[e.Floor][elevio.BT_HallDown].order {
+			e.requests[e.Floor][elevio.BT_HallUp].order = false
+			e.requests[e.Floor][elevio.BT_HallUp].elevatorID = ""
 		}
-		e.requests[e.floor][elevio.BT_HallDown].order = false
-		e.requests[e.floor][elevio.BT_HallDown].elevatorID = ""
+		e.requests[e.Floor][elevio.BT_HallDown].order = false
+		e.requests[e.Floor][elevio.BT_HallDown].elevatorID = ""
 	case elevio.MD_Stop:
 		fallthrough
 	default:
-		e.requests[e.floor][elevio.BT_HallUp].order = false
-		e.requests[e.floor][elevio.BT_HallUp].elevatorID = ""
-		e.requests[e.floor][elevio.BT_HallDown].order = false
-		e.requests[e.floor][elevio.BT_HallDown].elevatorID = ""
+		e.requests[e.Floor][elevio.BT_HallUp].order = false
+		e.requests[e.Floor][elevio.BT_HallUp].elevatorID = ""
+		e.requests[e.Floor][elevio.BT_HallDown].order = false
+		e.requests[e.Floor][elevio.BT_HallDown].elevatorID = ""
 	}
 	return e
 }
