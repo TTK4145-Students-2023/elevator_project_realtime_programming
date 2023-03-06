@@ -135,13 +135,16 @@ func Requests_clearAtCurrentFloor(e Elevator) Elevator {
 }
 
 func Requests_clearOnFloor(arrivedElevatorID string, floor int) {
-	if elevator.requests[floor][elevio.BT_HallDown].order && 
-	(arrivedElevatorID == elevator.requests[floor][elevio.BT_HallDown].elevatorID) {
-		Requests_clearAtCurrentFloor(elevator)
-	} else if elevator.requests[floor][elevio.BT_HallUp].order && 
-	(arrivedElevatorID == elevator.requests[floor][elevio.BT_HallUp].elevatorID) {
-		Requests_clearAtCurrentFloor(elevator)
+	if elevator.requests[floor][elevio.BT_HallDown].order &&
+		(arrivedElevatorID == elevator.requests[floor][elevio.BT_HallDown].elevatorID) {
+		elevator.requests[floor][elevio.BT_HallDown].order = false
+		elevator.requests[floor][elevio.BT_HallDown].elevatorID = ""
+	} else if elevator.requests[floor][elevio.BT_HallUp].order &&
+		(arrivedElevatorID == elevator.requests[floor][elevio.BT_HallUp].elevatorID) {
+		elevator.requests[floor][elevio.BT_HallUp].order = false
+		elevator.requests[floor][elevio.BT_HallUp].elevatorID = ""
 	}
+	SetAllLights(elevator)
 }
 
 /*func AddRequest(button elevio.ButtonEvent, chosenElevator string, e Elevator) {
