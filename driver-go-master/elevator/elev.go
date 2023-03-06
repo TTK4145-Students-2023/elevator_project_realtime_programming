@@ -23,7 +23,7 @@ type OrderpanelPair struct {
 
 type Elevator struct {
 	Floor      int
-	elevatorID string
+	ElevatorID string
 	Dirn       elevio.MotorDirection
 	requests   [numFloors][numButtons]OrderpanelPair
 	Behaviour  ElevatorBehaviour
@@ -83,6 +83,7 @@ func Elevator_uninitialized() Elevator {
 	elev := Elevator{Floor: -1}
 	elev.Behaviour = EB_Idle
 	elev.Dirn = elevio.MD_Stop
+	elev.ElevatorID = ""
 
 	return elev
 }

@@ -3,15 +3,15 @@ package elevator
 import "Driver-go/elevio"
 
 type OrderMessageStruct struct {
-	systemID   string
-	messageID  string
-	elevatorID string
+	SystemID   string
+	MessageID  string
+	ElevatorID string
 
-	orderCounter int
+	//orderCounter int
 
-	orderedButton elevio.ButtonEvent
+	OrderedButton elevio.ButtonEvent
 
-	chosenElevator string
+	ChosenElevator string
 }
 
 type IAmAliveMessageStruct struct {

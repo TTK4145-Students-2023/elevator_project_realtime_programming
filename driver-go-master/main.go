@@ -3,6 +3,7 @@ package main
 import (
 	"Driver-go/elevator"
 	"Driver-go/elevio"
+	"Driver-go/manager"
 	"Driver-go/network/bcast"
 	"Driver-go/network/localip"
 	"Driver-go/network/peers"
@@ -14,6 +15,7 @@ import (
 
 const nFloors = 4
 const nButtons = 3
+const myID = "1352"
 
 type HelloMsg struct {
 	Message string
@@ -50,26 +52,29 @@ func main() {
 	go peers.Receiver(15647, peerUpdateCh)
 
 	// We make channels for sending and receiving our custom data types
-	helloTx := make(chan HelloMsg)
-	helloRx := make(chan HelloMsg)
+	//helloTx := make(chan HelloMsg)
+	//helloRx := make(chan HelloMsg)
+
+	orderTx := make(chan elevator.OrderMessageStruct)
+	orderRx := make(chan elevator.OrderMessageStruct)
 	// ... and start the transmitter/receiver pair on some port
 	// These functions can take any number of channels! It is also possible to
 	//  start multiple transmitters/receivers on the same port.
-	go bcast.Transmitter(16569, helloTx)
-	go bcast.Receiver(16569, helloRx)
+	go bcast.Transmitter(16569, orderTx)
+	go bcast.Receiver(16569, orderRx)
 	//port: 16569
 
 	// The example message. We just send one of these every second.
-	go func() {
+	/*o func() {
 		helloMsg := HelloMsg{"Dette er den andre pc'en " + id, 0}
 		for {
 			helloMsg.Iter++
-			helloTx <- helloMsg
+			//helloTx <- helloMsg
 			time.Sleep(1 * time.Second)
 		}
-	}()
+	}()*/
 
-	fmt.Println("Started")
+	/*fmt.Println("Started")
 	for {
 		select {
 		case p := <-peerUpdateCh:
@@ -81,9 +86,14 @@ func main() {
 		case a := <-helloRx:
 			fmt.Printf("Received: %#v\n", a)
 		}
-	}
+	}*/
 
 	fmt.Println("Started!")
+
+	dataBase := manager.ElevatorDatabase{
+		NumElevators:       3,
+		ElevatorsInNetwork: [3]elevator.Elevator{elevator.Elevator_uninitialized()},
+	}
 
 	inputPollRateMs := 25
 	//var orders [4]int
@@ -127,8 +137,22 @@ func main() {
 			//Broadcaster fordelt ordre (med elevatorID)
 			//Hvis CAB-order: håndter internt (ikke broadcast)
 			//CAB-order deles ikke som en ordre, men som del av heis-tilstand/info
+			var chosenElevator string
 
-			//funskjon som kalkulere cost på alle
+			if button.Button == elevio.BT_Cab {
+				chosenElevator = myID
+			} else {
+				chosenElevator = manager.AssignOrderToElevator(dataBase, button)
+			}
+			//Husk at vi skal fikse CAB som en egen greie
+			//pakk inn i melding og send
+			orderMsg := elevator.OrderMessageStruct{SystemID: "Gruppe10",
+				MessageID:      "Order",
+				ElevatorID:     myID,
+				OrderedButton:  button,
+				ChosenElevator: chosenElevator}
+
+			orderTx <- orderMsg
 
 			elevator.Fsm_onRequestButtonPress(button.Floor, button.Button) //droppe denne
 
@@ -142,12 +166,15 @@ func main() {
 				elevio.SetMotorDirection(elevio.MD_Stop)
 			}
 
-			//case: mottatt broadcast-ordre
-			//putt i array (for å stoppe ved onFloorArrival)
-			//Hvis mottatt ordre har min elevatorID:
-			//Fsm_onReq
-
+		case orderBroadcast := <-orderRx:
+			fmt.Printf("Received: %#v\n", orderBroadcast)
 		}
+
+		//case: mottatt broadcast-ordre
+		//putt i array (for å stoppe ved onFloorArrival)
+		//Hvis mottatt ordre har min elevatorID:
+		//Fsm_onReq
+
 		time.Sleep(time.Duration(inputPollRateMs) * time.Millisecond)
 	}
 
