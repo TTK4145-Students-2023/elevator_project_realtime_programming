@@ -107,6 +107,7 @@ func Requests_shouldClearImmediately(e Elevator, btn_floor int, btn_type elevio.
 func Requests_clearAtCurrentFloor(e Elevator) Elevator {
 	//Tanken: Alle går på heisen som stopper, så ordre må cleares uansett fordeling
 	e.requests[e.Floor][elevio.BT_Cab].order = false
+	e.requests[e.Floor][elevio.BT_Cab].elevatorID = ""
 	switch e.Dirn {
 	case elevio.MD_Up:
 		if !Requests_above(e) && !e.requests[e.Floor][elevio.BT_HallUp].order {

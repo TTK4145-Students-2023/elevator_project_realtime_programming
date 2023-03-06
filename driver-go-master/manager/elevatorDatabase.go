@@ -6,8 +6,8 @@ import (
 )
 
 type ElevatorDatabase struct {
-	NumElevators int
-	ElevatorsInNetwork           [3]elevator.Elevator
+	NumElevators       int
+	ElevatorsInNetwork [3]elevator.Elevator
 }
 
 func AssignOrderToElevator(elevators ElevatorDatabase, order elevio.ButtonEvent) string {

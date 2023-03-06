@@ -4,7 +4,8 @@ import (
 	"Driver-go/elevio"
 	"fmt"
 )
-const MyID = "1352"
+
+const MyID = "7031"
 
 var elevator = Elevator_uninitialized(MyID)
 

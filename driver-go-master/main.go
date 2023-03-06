@@ -167,8 +167,8 @@ func main() {
 
 		case orderBroadcast := <-orderRx:
 			fmt.Printf("Received: %#v\n", orderBroadcast)
-			if (orderBroadcast.OrderedButton.Button == elevio.BT_Cab && orderBroadcast.ChosenElevator == elevator.MyID) ||
-				orderBroadcast.OrderedButton.Button != elevio.BT_Cab {
+			if (orderBroadcast.OrderedButton.Button == 2 && orderBroadcast.ChosenElevator == elevator.MyID) ||
+				orderBroadcast.OrderedButton.Button != 2 {
 				elevator.Fsm_onRequestButtonPress(orderBroadcast.OrderedButton.Floor, orderBroadcast.OrderedButton.Button, orderBroadcast.ChosenElevator)
 			}
 
