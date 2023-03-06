@@ -15,7 +15,6 @@ import (
 
 const nFloors = 4
 const nButtons = 3
-const myID = "7031"
 
 type HelloMsg struct {
 	Message string
@@ -92,7 +91,7 @@ func main() {
 
 	dataBase := manager.ElevatorDatabase{
 		NumElevators:       3,
-		ElevatorsInNetwork: [3]elevator.Elevator{elevator.Elevator_uninitialized()},
+		ElevatorsInNetwork: [3]elevator.Elevator{elevator.Elevator_uninitialized(elevator.MyID)},
 	}
 
 	inputPollRateMs := 25
@@ -140,7 +139,7 @@ func main() {
 			var chosenElevator string
 
 			if button.Button == elevio.BT_Cab {
-				chosenElevator = myID
+				chosenElevator = elevator.MyID
 			} else {
 				chosenElevator = manager.AssignOrderToElevator(dataBase, button)
 			}
@@ -148,7 +147,7 @@ func main() {
 			//pakk inn i melding og send
 			orderMsg := elevator.OrderMessageStruct{SystemID: "Gruppe10",
 				MessageID:      "Order",
-				ElevatorID:     myID,
+				ElevatorID:     elevator.MyID,
 				OrderedButton:  button,
 				ChosenElevator: chosenElevator}
 
@@ -168,7 +167,7 @@ func main() {
 
 		case orderBroadcast := <-orderRx:
 			fmt.Printf("Received: %#v\n", orderBroadcast)
-			if (orderBroadcast.OrderedButton.Button == elevio.BT_Cab && orderBroadcast.ChosenElevator == myID) ||
+			if (orderBroadcast.OrderedButton.Button == elevio.BT_Cab && orderBroadcast.ChosenElevator == elevator.MyID) ||
 				orderBroadcast.OrderedButton.Button != elevio.BT_Cab {
 				elevator.Fsm_onRequestButtonPress(orderBroadcast.OrderedButton.Floor, orderBroadcast.OrderedButton.Button, orderBroadcast.ChosenElevator)
 			}

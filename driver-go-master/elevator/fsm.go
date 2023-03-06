@@ -4,11 +4,12 @@ import (
 	"Driver-go/elevio"
 	"fmt"
 )
+const MyID = "1352"
 
-var elevator = Elevator_uninitialized()
+var elevator = Elevator_uninitialized(MyID)
 
 func Fsm_init() {
-	elevator = Elevator_uninitialized()
+	elevator = Elevator_uninitialized(MyID)
 
 	elevio.SetFloorIndicator(elevator.Floor)
 	SetAllLights(elevator)
