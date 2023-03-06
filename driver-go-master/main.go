@@ -15,7 +15,7 @@ import (
 
 const nFloors = 4
 const nButtons = 3
-const myID = "1352"
+const myID = "7031"
 
 type HelloMsg struct {
 	Message string
@@ -168,7 +168,11 @@ func main() {
 
 		case orderBroadcast := <-orderRx:
 			fmt.Printf("Received: %#v\n", orderBroadcast)
-			elevator.Fsm_onRequestButtonPress(orderBroadcast.OrderedButton.Floor, orderBroadcast.OrderedButton.Button)
+			if (orderBroadcast.OrderedButton.Button == elevio.BT_Cab && orderBroadcast.ChosenElevator == myID) ||
+				orderBroadcast.OrderedButton.Button != elevio.BT_Cab {
+				elevator.Fsm_onRequestButtonPress(orderBroadcast.OrderedButton.Floor, orderBroadcast.OrderedButton.Button, orderBroadcast.ChosenElevator)
+			}
+
 		}
 
 		//case: mottatt broadcast-ordre

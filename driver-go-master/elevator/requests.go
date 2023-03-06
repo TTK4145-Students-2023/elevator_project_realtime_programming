@@ -133,6 +133,10 @@ func Requests_clearAtCurrentFloor(e Elevator) Elevator {
 	return e
 }
 
+/*func AddRequest(button elevio.ButtonEvent, chosenElevator string, e Elevator) {
+	ele
+}*/
+
 // ////////////////////////
 /*func Requests_clearFloorOrders(floor int) {
 	elevio.SetMotorDirection(elevio.MD_Stop)
