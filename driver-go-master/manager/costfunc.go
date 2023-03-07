@@ -11,7 +11,8 @@ import (
 const (
 	baseCost            = 10.0
 	ratePerUnitDistance = 0.5
-	directionChangeCost = 50.0
+	buttonChangeCost    = 50.0
+	directionChangeCost = 5.0
 	waitingTime         = 10.0
 	waitingTimeRate     = 0.1
 )
@@ -29,13 +30,14 @@ func calculateCost(e *elevator.Elevator, order elevio.ButtonEvent) float64 {
 	cost := distance * ratePerUnitDistance
 
 	// If elevator needs to change direction, add direction change cost
-	//if currDir != elevio.MD_Stop && currDir != getDirection(currFloor, floor) {
-	//	cost += directionChangeCost
-	//}
+	if currDir != elevio.MD_Stop && currDir != getDirection(currFloor, order.Floor) {
+		cost += directionChangeCost
+	}
+
 
 	if (currDir == elevio.MD_Up && order.Button == elevio.BT_HallDown) ||
 	 (currDir == elevio.MD_Down && order.Button == elevio.BT_HallUp) {
-		cost += directionChangeCost
+		cost += buttonChangeCost
 	}
 
 	// Add any additional costs
@@ -45,7 +47,7 @@ func calculateCost(e *elevator.Elevator, order elevio.ButtonEvent) float64 {
 }
 
 // Helper function to calculate direction to travel inudp 
-/*
+
 func getDirection(fromFloor, toFloor int) elevio.MotorDirection {
 	if fromFloor < toFloor {
 		return elevio.MD_Up
@@ -54,7 +56,7 @@ func getDirection(fromFloor, toFloor int) elevio.MotorDirection {
 	}
 	return elevio.MD_Stop
 }
-*/
+
 
 // Helper function to calculate waiting time cost
 func waitingTimeCost(e *elevator.Elevator) float64 {

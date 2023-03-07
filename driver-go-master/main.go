@@ -98,6 +98,7 @@ func main() {
 	fmt.Println("Started!")
 
 	dataBase := manager.ElevatorDatabase{
+		//hardkodede verdier vi alltid bruker når vi flagger
 		Elevator1352: elevator.Elevator_uninitialized("1352"),
 		Elevator7031: elevator.Elevator_uninitialized("7031"),
 	}
@@ -105,7 +106,7 @@ func main() {
 	inputPollRateMs := 25
 	//var orders [4]int
 
-	elevio.Init("localhost:15657", nFloors)
+	elevio.Init("localhost: "+id, nFloors)
 
 	//var d elevio.MotorDirection = elevio.MD_Up
 
@@ -187,10 +188,13 @@ func main() {
 
 		case orderBroadcast := <-orderRx:
 			fmt.Printf("Received: %#v\n", orderBroadcast)
-			if (orderBroadcast.OrderedButton.Button == 2 && orderBroadcast.ChosenElevator == elevator.MyID) ||
-				orderBroadcast.OrderedButton.Button != 2 {
+			
+			if (orderBroadcast.OrderedButton.Button == elevio.BT_Cab && orderBroadcast.ChosenElevator == elevator.MyID) ||
+				orderBroadcast.OrderedButton.Button != elevio.BT_Cab {
 				elevator.Fsm_onRequestButtonPress(orderBroadcast.OrderedButton.Floor, orderBroadcast.OrderedButton.Button, orderBroadcast.ChosenElevator)
 			}
+
+			
 
 		case aliveMsg := <-aliveRx:
 			//oppdater tilhørende heis i databasestruct (dette er for å regne cost)
@@ -200,6 +204,7 @@ func main() {
 			case "7031":
 				dataBase.Elevator7031 = aliveMsg.Elevator
 			}
+			//fmt.Printf("Recivied IAMALIVE:  %#v\n", aliveMsg)
 		}
 
 		//case: mottatt broadcast-ordre

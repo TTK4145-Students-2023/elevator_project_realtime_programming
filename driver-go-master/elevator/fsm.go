@@ -35,31 +35,32 @@ func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType, chosenEle
 	//fmt.Printf("\n\n%s(%d, %s)\n", "fsm_onRequestButtonPress", btnFloor, btnType.ToString())
 	elevatorPrint(elevator)
 	//fmt.Println(calculateCost(&elevator, btnFloor))
-
-	switch elevator.Behaviour {
-	case EB_DoorOpen:
-		if Requests_shouldClearImmediately(elevator, btnFloor, btnType) {
-		} else {
+	if !elevator.requests[btnFloor][btnType].order { //La til denne for å sikre at man ikke omfordeler en ordre dersom en knapp blir trykket på flere ganger
+		switch elevator.Behaviour {
+		case EB_DoorOpen:
+			if Requests_shouldClearImmediately(elevator, btnFloor, btnType) {
+			} else {
+				elevator.requests[btnFloor][btnType].order = true
+				elevator.requests[btnFloor][btnType].elevatorID = chosenElevator
+			}
+		case EB_Moving:
 			elevator.requests[btnFloor][btnType].order = true
 			elevator.requests[btnFloor][btnType].elevatorID = chosenElevator
-		}
-	case EB_Moving:
-		elevator.requests[btnFloor][btnType].order = true
-		elevator.requests[btnFloor][btnType].elevatorID = chosenElevator
-	case EB_Idle:
-		elevator.requests[btnFloor][btnType].order = true
-		elevator.requests[btnFloor][btnType].elevatorID = chosenElevator
-		pair := Requests_chooseDirection(elevator)
-		elevator.Dirn = pair.dirn
-		elevator.Behaviour = pair.behaviour
-		switch pair.behaviour {
-		case EB_DoorOpen:
-			elevio.SetDoorOpenLamp(true)
-			elevator.DoorOpen = true
-			elevator = Requests_clearAtCurrentFloor(elevator)
-		case EB_Moving:
-			elevio.SetMotorDirection(elevator.Dirn)
 		case EB_Idle:
+			elevator.requests[btnFloor][btnType].order = true
+			elevator.requests[btnFloor][btnType].elevatorID = chosenElevator
+			pair := Requests_chooseDirection(elevator)
+			elevator.Dirn = pair.dirn
+			elevator.Behaviour = pair.behaviour
+			switch pair.behaviour {
+			case EB_DoorOpen:
+				elevio.SetDoorOpenLamp(true)
+				elevator.DoorOpen = true
+				elevator = Requests_clearAtCurrentFloor(elevator)
+			case EB_Moving:
+				elevio.SetMotorDirection(elevator.Dirn)
+			case EB_Idle:
+			}
 		}
 	}
 
