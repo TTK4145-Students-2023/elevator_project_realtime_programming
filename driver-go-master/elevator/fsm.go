@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-const MyID = "7031"
+const MyID = "70310"
 
 var elevator = Elevator_uninitialized(MyID)
 

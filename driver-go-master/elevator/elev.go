@@ -9,11 +9,17 @@ const numFloors = 4
 const numButtons = 3
 
 type ElevatorBehaviour int
-
 const (
 	EB_Idle = iota
 	EB_Moving
 	EB_DoorOpen
+)
+
+type WorkingState int
+const(
+	WS_Running = iota
+	WS_Unconnected 
+	WS_NoMotor 
 )
 
 type OrderpanelPair struct {
@@ -28,6 +34,7 @@ type Elevator struct {
 	requests   [numFloors][numButtons]OrderpanelPair
 	Behaviour  ElevatorBehaviour
 	DoorOpen   bool
+	Operating WorkingState
 }
 
 func ebToString(eb ElevatorBehaviour) string {
@@ -84,6 +91,10 @@ func elevatorPrint(es Elevator) {
 	elev.Behaviour = EB_Idle
 	elev.Dirn = elevio.MD_Stop
 	elev.ElevatorID = myID
+	elev.Operating = WS_Unconnected
+
+	//elev.LocalTimer = time.NewTimer(0.001*time.Second)
+	//Fsm_onDoorTimeout kan bli lei seg av at vi er i etg -10
  
 	return elev
  }

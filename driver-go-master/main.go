@@ -97,16 +97,20 @@ func main() {
 
 	fmt.Println("Started!")
 
-	dataBase := manager.ElevatorDatabase{
+	database := manager.ElevatorDatabase{
 		//hardkodede verdier vi alltid bruker når vi flagger
-		Elevator1352: elevator.Elevator_uninitialized("1352"),
-		Elevator7031: elevator.Elevator_uninitialized("7031"),
+		NumElevators: 3,
+
+		Elevator13520: elevator.Elevator_uninitialized("13520"),
+		Elevator70310: elevator.Elevator_uninitialized("70310"),
+		Elevator54321: elevator.Elevator_uninitialized("54321"),
 	}
+	
 
 	inputPollRateMs := 25
 	//var orders [4]int
 
-	elevio.Init("localhost: "+id, nFloors)
+	elevio.Init("localhost: 15657", nFloors)
 
 	//var d elevio.MotorDirection = elevio.MD_Up
 
@@ -162,7 +166,7 @@ func main() {
 			//Broadcaster fordelt ordre (med elevatorID)
 			//Hvis CAB-order: håndter internt (ikke broadcast)
 			//CAB-order deles ikke som en ordre, men som del av heis-tilstand/info
-			chosenElevator := manager.AssignOrderToElevator(dataBase, button)
+			chosenElevator := manager.AssignOrderToElevator(database, button)
 			
 			//Husk at vi skal fikse CAB som en egen greie
 			//pakk inn i melding og send
@@ -194,16 +198,29 @@ func main() {
 				elevator.Fsm_onRequestButtonPress(orderBroadcast.OrderedButton.Floor, orderBroadcast.OrderedButton.Button, orderBroadcast.ChosenElevator)
 			}
 
+			fmt.Printf("Received database: %#v\n", database)
 			
 
 		case aliveMsg := <-aliveRx:
 			//oppdater tilhørende heis i databasestruct (dette er for å regne cost)
 			switch aliveMsg.ElevatorID {
-			case "1352":
-				dataBase.Elevator1352 = aliveMsg.Elevator
-			case "7031":
-				dataBase.Elevator7031 = aliveMsg.Elevator
+			case "13520":
+				if aliveMsg.Elevator.Operating != elevator.WS_NoMotor {
+					aliveMsg.Elevator.Operating = elevator.WS_Running
+				}
+				database.Elevator13520 = aliveMsg.Elevator
+			case "70310":
+				if aliveMsg.Elevator.Operating != elevator.WS_NoMotor {
+					aliveMsg.Elevator.Operating = elevator.WS_Running
+				}
+				database.Elevator70310 = aliveMsg.Elevator
+			case "54321":
+				if aliveMsg.Elevator.Operating != elevator.WS_NoMotor {
+					aliveMsg.Elevator.Operating = elevator.WS_Running
+				}
+				database.Elevator54321 = aliveMsg.Elevator
 			}
+
 			//fmt.Printf("Recivied IAMALIVE:  %#v\n", aliveMsg)
 		}
 
