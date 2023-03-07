@@ -58,10 +58,10 @@ func DirnToString(direction elevio.MotorDirection) string {
 
 func elevatorPrint(es Elevator) {
 	fmt.Println("  +--------------------+")
-	fmt.Printf("  |floor = %-2d      	|\n", es.Floor)
+	fmt.Printf("  |floor = %-2d         |\n", es.Floor)
 	fmt.Printf("  |dirn  = %-12.12s|\n", DirnToString(es.Dirn))
 	fmt.Printf("  |behav = %-12.12s|\n", ebToString(es.Behaviour))
-
+	fmt.Printf("  |door = %-2s          |\n", es.DoorOpen)
 	fmt.Println("  +--------------------+")
 	fmt.Println("  |  | up  | dn  | cab |")
 	for f := numFloors - 1; f >= 0; f-- {
@@ -69,7 +69,7 @@ func elevatorPrint(es Elevator) {
 		for btn := 0; btn < numButtons; btn++ {
 			if (f == numButtons-1 && btn == int(elevio.BT_HallUp)) ||
 				(f == 0 && btn == int(elevio.BT_HallDown)) {
-				fmt.Print("| 	")
+				fmt.Print("|    ")
 			} else {
 				fmt.Print(es.requests[f][btn])
 			}
@@ -77,13 +77,14 @@ func elevatorPrint(es Elevator) {
 		fmt.Print("|\n")
 	}
 	fmt.Println("  +--------------------+")
-}
-
-func Elevator_uninitialized(myID string) Elevator {
-	elev := Elevator{Floor: -1}
+ }
+ 
+ func Elevator_uninitialized(myID string) Elevator {
+	elev := Elevator{Floor: -10}
 	elev.Behaviour = EB_Idle
 	elev.Dirn = elevio.MD_Stop
 	elev.ElevatorID = myID
-
+ 
 	return elev
-}
+ }
+ 

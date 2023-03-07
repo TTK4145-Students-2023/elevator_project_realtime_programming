@@ -161,13 +161,8 @@ func main() {
 			//Broadcaster fordelt ordre (med elevatorID)
 			//Hvis CAB-order: håndter internt (ikke broadcast)
 			//CAB-order deles ikke som en ordre, men som del av heis-tilstand/info
-			var chosenElevator string
-
-			if button.Button == elevio.BT_Cab {
-				chosenElevator = elevator.MyID
-			} else {
-				chosenElevator = manager.AssignOrderToElevator(dataBase, button)
-			}
+			chosenElevator := manager.AssignOrderToElevator(dataBase, button)
+			
 			//Husk at vi skal fikse CAB som en egen greie
 			//pakk inn i melding og send
 			orderMsg := elevator.OrderMessageStruct{SystemID: "Gruppe10",

@@ -14,7 +14,7 @@ func Timer_runTimer(receiver chan<- bool) {
 			timer := time.NewTimer(3 * time.Second)
 			<-timer.C
 			receiver <- true
-			elevator.DoorOpen = false
+			elevator.DoorOpen = false //flytte?
 		}
 	}
 	//OBS! Mangler håndtering av obstruksjon

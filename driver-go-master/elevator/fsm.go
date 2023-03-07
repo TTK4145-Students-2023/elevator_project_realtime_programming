@@ -55,6 +55,7 @@ func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType, chosenEle
 		switch pair.behaviour {
 		case EB_DoorOpen:
 			elevio.SetDoorOpenLamp(true)
+			elevator.DoorOpen = true
 			elevator = Requests_clearAtCurrentFloor(elevator)
 		case EB_Moving:
 			elevio.SetMotorDirection(elevator.Dirn)
