@@ -3,6 +3,7 @@ package elevator
 import (
 	"Driver-go/elevio"
 	"fmt"
+	"time"
 )
 
 const MyID = "70310"
@@ -31,14 +32,15 @@ func Fsm_onInitBetweenFloors() {
 	elevator.Behaviour = EB_Moving
 }
 
-func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType, chosenElevator string) {
+func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType, chosenElevator string, timer *time.Timer) {
 	//fmt.Printf("\n\n%s(%d, %s)\n", "fsm_onRequestButtonPress", btnFloor, btnType.ToString())
-	elevatorPrint(elevator)
+	ElevatorPrint(elevator)
 	//fmt.Println(calculateCost(&elevator, btnFloor))
 	if !elevator.requests[btnFloor][btnType].order { //La til denne for å sikre at man ikke omfordeler en ordre dersom en knapp blir trykket på flere ganger
 		switch elevator.Behaviour {
 		case EB_DoorOpen:
 			if Requests_shouldClearImmediately(elevator, btnFloor, btnType) {
+				Timer_Reset(timer)
 			} else {
 				elevator.requests[btnFloor][btnType].order = true
 				elevator.requests[btnFloor][btnType].elevatorID = chosenElevator
@@ -55,7 +57,7 @@ func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType, chosenEle
 			switch pair.behaviour {
 			case EB_DoorOpen:
 				elevio.SetDoorOpenLamp(true)
-				elevator.DoorOpen = true
+				Timer_Reset(timer)
 				elevator = Requests_clearAtCurrentFloor(elevator)
 			case EB_Moving:
 				elevio.SetMotorDirection(elevator.Dirn)
@@ -67,12 +69,12 @@ func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType, chosenEle
 	SetAllLights(elevator)
 
 	fmt.Printf("\nNew state:\n")
-	elevatorPrint(elevator)
+	ElevatorPrint(elevator)
 }
 
-func Fsm_onFloorArrival(newFloor int) {
+func Fsm_onFloorArrival(newFloor int, timer *time.Timer) {
 	fmt.Printf("\n\n%s(%d)\n", "fsm_onFloorArrival", newFloor)
-	elevatorPrint(elevator)
+	ElevatorPrint(elevator)
 
 	elevator.Floor = newFloor
 
@@ -81,7 +83,7 @@ func Fsm_onFloorArrival(newFloor int) {
 		if Requests_shouldStop(elevator) {
 			elevio.SetMotorDirection(elevio.MD_Stop)
 			elevio.SetDoorOpenLamp(true)
-			elevator.DoorOpen = true
+			Timer_Reset(timer)
 			elevator = Requests_clearAtCurrentFloor(elevator)
 			SetAllLights(elevator)
 			elevator.Behaviour = EB_DoorOpen
@@ -90,12 +92,12 @@ func Fsm_onFloorArrival(newFloor int) {
 	}
 
 	fmt.Printf("\nNew state:\n")
-	elevatorPrint(elevator)
+	ElevatorPrint(elevator)
 }
 
 func Fsm_onDoorTimeout() {
 	//fmt.Printf("\n\n%s()\n", runtime.FuncForPC(reflect.ValueOf(fsm_onDoorTimeout).Pointer()).Name())
-	//elevatorPrint(elevator)
+	//ElevatorPrint(elevator)
 
 	switch elevator.Behaviour {
 	case EB_DoorOpen:
@@ -117,5 +119,5 @@ func Fsm_onDoorTimeout() {
 	}
 
 	fmt.Println("\nNew state:")
-	elevatorPrint(elevator)
+	ElevatorPrint(elevator)
 }

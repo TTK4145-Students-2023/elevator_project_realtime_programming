@@ -71,30 +71,6 @@ func main() {
 	go elevator.SendIAmAlive(aliveTx)
 	//port: 16569
 
-	// The example message. We just send one of these every second.
-	/*o func() {
-		helloMsg := HelloMsg{"Dette er den andre pc'en " + id, 0}
-		for {
-			helloMsg.Iter++
-			//helloTx <- helloMsg
-			time.Sleep(1 * time.Second)
-		}
-	}()*/
-
-	/*fmt.Println("Started")
-	for {
-		select {
-		case p := <-peerUpdateCh:
-			fmt.Printf("Peer update:\n")
-			fmt.Printf("  Peers:    %q\n", p.Peers)
-			fmt.Printf("  New:      %q\n", p.New)
-			fmt.Printf("  Lost:     %q\n", p.Lost)
-
-		case a := <-helloRx:
-			fmt.Printf("Received: %#v\n", a)
-		}
-	}*/
-
 	fmt.Println("Started!")
 
 	database := manager.ElevatorDatabase{
@@ -105,28 +81,25 @@ func main() {
 		Elevator70310: elevator.Elevator_uninitialized("70310"),
 		Elevator54321: elevator.Elevator_uninitialized("54321"),
 	}
-	
+
+	timer := time.NewTimer(3 * time.Second)
+	timer.Stop()
 
 	inputPollRateMs := 25
-	//var orders [4]int
 
-	elevio.Init("localhost: 15657", nFloors)
-
-	//var d elevio.MotorDirection = elevio.MD_Up
-
-	//elevio.SetMotorDirection(d)
+	elevio.Init("localhost:15657", nFloors)
 
 	drv_buttons := make(chan elevio.ButtonEvent)
 	drv_floors := make(chan int)
 	drv_obstr := make(chan bool)
 	drv_stop := make(chan bool)
-	drv_timer := make(chan bool)
+	//drv_timer := make(chan bool)
 
 	go elevio.PollButtons(drv_buttons)
 	go elevio.PollFloorSensor(drv_floors)
 	go elevio.PollObstructionSwitch(drv_obstr)
 	go elevio.PollStopButton(drv_stop)
-	go elevator.Timer_runTimer(drv_timer)
+	//go elevator.Timer_runTimer(drv_timer)
 
 	//input := elevioGetInputDevice()
 
@@ -153,7 +126,7 @@ func main() {
 
 		case floorArrivalBroadcast := <-floorArrivalRx:
 			if floorArrivalBroadcast.ElevatorID == elevator.MyID {
-				elevator.Fsm_onFloorArrival(floorArrivalBroadcast.ArrivedFloor)
+				elevator.Fsm_onFloorArrival(floorArrivalBroadcast.ArrivedFloor, timer)
 			} else {
 				elevator.Requests_clearOnFloor(floorArrivalBroadcast.ElevatorID, floorArrivalBroadcast.ArrivedFloor)
 			}
@@ -167,7 +140,7 @@ func main() {
 			//Hvis CAB-order: håndter internt (ikke broadcast)
 			//CAB-order deles ikke som en ordre, men som del av heis-tilstand/info
 			chosenElevator := manager.AssignOrderToElevator(database, button)
-			
+
 			//Husk at vi skal fikse CAB som en egen greie
 			//pakk inn i melding og send
 			orderMsg := elevator.OrderMessageStruct{SystemID: "Gruppe10",
@@ -180,29 +153,38 @@ func main() {
 
 			//elevator.Fsm_onRequestButtonPress(button.Floor, button.Button) //droppe denne
 
-		case timer := <-drv_timer:
+		case timer := <-timer.C:
+			fmt.Println("fått lest fra timer.C")
+
 			fmt.Print(timer)
 
 			elevator.Fsm_onDoorTimeout()
 
 		case obstruction := <-drv_obstr:
-			if obstruction {
-				elevio.SetMotorDirection(elevio.MD_Stop)
+			if elevator.IsDoorOpen() && obstruction {
+				timer.Stop()
+			} else if !obstruction && elevator.IsDoorOpen() {
+				timer.Reset(3 * time.Second)
 			}
+
+			//if obstruction {
+			//	elevio.SetMotorDirection(elevio.MD_Stop)
+			//}
 
 		case orderBroadcast := <-orderRx:
 			fmt.Printf("Received: %#v\n", orderBroadcast)
-			
+
 			if (orderBroadcast.OrderedButton.Button == elevio.BT_Cab && orderBroadcast.ChosenElevator == elevator.MyID) ||
 				orderBroadcast.OrderedButton.Button != elevio.BT_Cab {
-				elevator.Fsm_onRequestButtonPress(orderBroadcast.OrderedButton.Floor, orderBroadcast.OrderedButton.Button, orderBroadcast.ChosenElevator)
+				elevator.Fsm_onRequestButtonPress(orderBroadcast.OrderedButton.Floor, orderBroadcast.OrderedButton.Button, orderBroadcast.ChosenElevator, timer)
 			}
 
-			fmt.Printf("Received database: %#v\n", database)
-			
+			//fmt.Printf("Received database: %#v\n", database)
 
 		case aliveMsg := <-aliveRx:
 			//oppdater tilhørende heis i databasestruct (dette er for å regne cost)
+			//FUNKSJON: ifElevInDatabase()
+			//database.ElevatorsInNetwork = append(database.ElevatorsInNetwork, aliveMsg.Elevator)
 			switch aliveMsg.ElevatorID {
 			case "13520":
 				if aliveMsg.Elevator.Operating != elevator.WS_NoMotor {
@@ -211,8 +193,10 @@ func main() {
 				database.Elevator13520 = aliveMsg.Elevator
 			case "70310":
 				if aliveMsg.Elevator.Operating != elevator.WS_NoMotor {
+					fmt.Println("-------Vi er inne i running----------------")
 					aliveMsg.Elevator.Operating = elevator.WS_Running
 				}
+				//elevator.ElevatorPrint(database.Elevator13520)
 				database.Elevator70310 = aliveMsg.Elevator
 			case "54321":
 				if aliveMsg.Elevator.Operating != elevator.WS_NoMotor {

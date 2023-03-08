@@ -9,6 +9,7 @@ const numFloors = 4
 const numButtons = 3
 
 type ElevatorBehaviour int
+
 const (
 	EB_Idle = iota
 	EB_Moving
@@ -16,10 +17,11 @@ const (
 )
 
 type WorkingState int
-const(
+
+const (
 	WS_Running = iota
-	WS_Unconnected 
-	WS_NoMotor 
+	WS_Unconnected
+	WS_NoMotor
 )
 
 type OrderpanelPair struct {
@@ -28,13 +30,14 @@ type OrderpanelPair struct {
 }
 
 type Elevator struct {
-	Floor      int
-	ElevatorID string
-	Dirn       elevio.MotorDirection
-	requests   [numFloors][numButtons]OrderpanelPair
-	Behaviour  ElevatorBehaviour
-	DoorOpen   bool
-	Operating WorkingState
+	Floor       int
+	ElevatorID  string
+	Dirn        elevio.MotorDirection
+	requests    [numFloors][numButtons]OrderpanelPair
+	Behaviour   ElevatorBehaviour
+	DoorOpen    bool
+	Operating   WorkingState
+	OrderNumber int
 }
 
 func ebToString(eb ElevatorBehaviour) string {
@@ -63,12 +66,14 @@ func DirnToString(direction elevio.MotorDirection) string {
 	}
 }
 
-func elevatorPrint(es Elevator) {
+func ElevatorPrint(es Elevator) {
 	fmt.Println("  +--------------------+")
+	fmt.Printf("  |ID = %-2d         |\n", es.ElevatorID)
 	fmt.Printf("  |floor = %-2d         |\n", es.Floor)
 	fmt.Printf("  |dirn  = %-12.12s|\n", DirnToString(es.Dirn))
 	fmt.Printf("  |behav = %-12.12s|\n", ebToString(es.Behaviour))
 	fmt.Printf("  |door = %-2s          |\n", es.DoorOpen)
+	fmt.Printf("  |operating = %-2s         |\n", es.Operating)
 	fmt.Println("  +--------------------+")
 	fmt.Println("  |  | up  | dn  | cab |")
 	for f := numFloors - 1; f >= 0; f-- {
@@ -84,18 +89,27 @@ func elevatorPrint(es Elevator) {
 		fmt.Print("|\n")
 	}
 	fmt.Println("  +--------------------+")
- }
- 
- func Elevator_uninitialized(myID string) Elevator {
+}
+
+func Elevator_uninitialized(myID string) Elevator {
 	elev := Elevator{Floor: -10}
 	elev.Behaviour = EB_Idle
 	elev.Dirn = elevio.MD_Stop
 	elev.ElevatorID = myID
 	elev.Operating = WS_Unconnected
+	elev.OrderNumber = 0
+	//elevio.SetDoorOpenLamp(false)
 
 	//elev.LocalTimer = time.NewTimer(0.001*time.Second)
 	//Fsm_onDoorTimeout kan bli lei seg av at vi er i etg -10
- 
+
 	return elev
- }
- 
+}
+
+func IsDoorOpen() bool {
+	var doorOpen = false
+	if elevator.Behaviour == EB_DoorOpen {
+		doorOpen = true
+	}
+	return doorOpen
+}

@@ -7,7 +7,6 @@ import (
 var timerEndTime time.Time
 var timerActive bool
 
-
 func Timer_runTimer(receiver chan<- bool) {
 	for {
 		if elevator.DoorOpen {
@@ -18,9 +17,14 @@ func Timer_runTimer(receiver chan<- bool) {
 		}
 	}
 	//OBS! Mangler håndtering av obstruksjon
- }
- 
+}
 
+func Timer_Reset(timer *time.Timer) {
+	//if !timer.Stop(){
+	//	<-timer.C
+	//}
+	timer.Reset(3 * time.Second)
+}
 
 func Get_wall_time() float64 {
 	return float64(time.Now().UnixNano()) / 1e9
