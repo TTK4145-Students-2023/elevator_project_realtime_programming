@@ -40,7 +40,7 @@ func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType, chosenEle
 		switch elevator.Behaviour {
 		case EB_DoorOpen:
 			if Requests_shouldClearImmediately(elevator, btnFloor, btnType) {
-				Timer_Reset(timer)
+				timer.Reset(3 * time.Second)
 			} else {
 				elevator.requests[btnFloor][btnType].order = true
 				elevator.requests[btnFloor][btnType].elevatorID = chosenElevator
@@ -57,7 +57,7 @@ func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType, chosenEle
 			switch pair.behaviour {
 			case EB_DoorOpen:
 				elevio.SetDoorOpenLamp(true)
-				Timer_Reset(timer)
+				timer.Reset(3 * time.Second)
 				elevator = Requests_clearAtCurrentFloor(elevator)
 			case EB_Moving:
 				elevio.SetMotorDirection(elevator.Dirn)
@@ -83,7 +83,7 @@ func Fsm_onFloorArrival(newFloor int, timer *time.Timer) {
 		if Requests_shouldStop(elevator) {
 			elevio.SetMotorDirection(elevio.MD_Stop)
 			elevio.SetDoorOpenLamp(true)
-			Timer_Reset(timer)
+			timer.Reset(3 * time.Second)
 			elevator = Requests_clearAtCurrentFloor(elevator)
 			SetAllLights(elevator)
 			elevator.Behaviour = EB_DoorOpen
