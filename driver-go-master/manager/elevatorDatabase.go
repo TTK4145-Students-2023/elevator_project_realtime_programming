@@ -6,12 +6,10 @@ import (
 )
 
 type ElevatorDatabase struct {
-	NumElevators int
-	//ElevatorsInNetwork []elevator.Elevator
+	NumElevators       int
+	ElevatorsInNetwork []elevator.Elevator
 
-	Elevator13520 elevator.Elevator
-	Elevator70310 elevator.Elevator
-	Elevator54321 elevator.Elevator
+	
 
 	//ElevatorsInNetwork [2]elevator.Elevator
 }
@@ -21,8 +19,8 @@ func AssignOrderToElevator(database ElevatorDatabase, order elevio.ButtonEvent) 
 	lowCost := 100000.0
 	elevatorID := ""
 
-	connectedElevators := [3]elevator.Elevator{database.Elevator13520, database.Elevator70310, database.Elevator54321}
-
+	connectedElevators := database.ElevatorsInNetwork
+	
 	if order.Button == elevio.BT_Cab {
 		elevatorID = elevator.MyID
 	} else {
@@ -36,6 +34,27 @@ func AssignOrderToElevator(database ElevatorDatabase, order elevio.ButtonEvent) 
 	}
 
 	return elevatorID
+}
+
+func IsElevatorInDatabase(elevatorID string, database ElevatorDatabase) bool {
+	for i := 0; i < database.NumElevators; i++ {
+		if database.ElevatorsInNetwork[i].ElevatorID == elevatorID { //Sjekker at calgt heis ikke er unconnected
+			return true
+		}
+	}
+	return false
+}
+
+func UpdateDatabase(aliveMsg elevator.IAmAliveMessageStruct, database ElevatorDatabase) {
+	if aliveMsg.Elevator.Operating != elevator.WS_NoMotor {
+		aliveMsg.Elevator.Operating = elevator.WS_Running //OBS! Nå håndterer vi running-state som connected
+	}
+
+	for i := 0; i < database.NumElevators; i++ {
+		if database.ElevatorsInNetwork[i].ElevatorID == aliveMsg.ElevatorID {
+			database.ElevatorsInNetwork[i] = aliveMsg.Elevator
+		}
+	}
 }
 
 /*

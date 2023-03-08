@@ -106,6 +106,10 @@ func Elevator_uninitialized(myID string) Elevator {
 	return elev
 }
 
+func Elevator_increaseOrderNumber() {
+	elevator.OrderNumber++
+}
+
 func IsDoorOpen() bool {
 	var doorOpen = false
 	if elevator.Behaviour == EB_DoorOpen {

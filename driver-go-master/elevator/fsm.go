@@ -10,6 +10,8 @@ const MyID = "70310"
 
 var elevator = Elevator_uninitialized(MyID)
 
+
+
 func Fsm_init() {
 	elevator = Elevator_uninitialized(MyID)
 

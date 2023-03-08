@@ -75,11 +75,11 @@ func main() {
 
 	database := manager.ElevatorDatabase{
 		//hardkodede verdier vi alltid bruker når vi flagger
-		NumElevators: 3,
+		NumElevators: 0,
 
-		Elevator13520: elevator.Elevator_uninitialized("13520"),
-		Elevator70310: elevator.Elevator_uninitialized("70310"),
-		Elevator54321: elevator.Elevator_uninitialized("54321"),
+		//Elevator13520: elevator.Elevator_uninitialized("13520"),
+		//Elevator70310: elevator.Elevator_uninitialized("70310"),
+		//Elevator54321: elevator.Elevator_uninitialized("54321"),
 	}
 
 	timer := time.NewTimer(3 * time.Second)
@@ -171,6 +171,9 @@ func main() {
 
 		case orderBroadcast := <-orderRx:
 			fmt.Printf("Received: %#v\n", orderBroadcast)
+			if orderBroadcast.OrderedButton.Button != elevio.BT_Cab {
+				elevator.Elevator_increaseOrderNumber()
+			}
 
 			if (orderBroadcast.OrderedButton.Button == elevio.BT_Cab && orderBroadcast.ChosenElevator == elevator.MyID) ||
 				orderBroadcast.OrderedButton.Button != elevio.BT_Cab {
@@ -181,27 +184,34 @@ func main() {
 
 		case aliveMsg := <-aliveRx:
 			//oppdater tilhørende heis i databasestruct (dette er for å regne cost)
-			//FUNKSJON: ifElevInDatabase()
-			//database.ElevatorsInNetwork = append(database.ElevatorsInNetwork, aliveMsg.Elevator)
-			switch aliveMsg.ElevatorID {
-			case "13520":
-				if aliveMsg.Elevator.Operating != elevator.WS_NoMotor {
-					aliveMsg.Elevator.Operating = elevator.WS_Running
-				}
-				database.Elevator13520 = aliveMsg.Elevator
-			case "70310":
-				if aliveMsg.Elevator.Operating != elevator.WS_NoMotor {
-					fmt.Println("-------Vi er inne i running----------------")
-					aliveMsg.Elevator.Operating = elevator.WS_Running
-				}
-				//elevator.ElevatorPrint(database.Elevator13520)
-				database.Elevator70310 = aliveMsg.Elevator
-			case "54321":
-				if aliveMsg.Elevator.Operating != elevator.WS_NoMotor {
-					aliveMsg.Elevator.Operating = elevator.WS_Running
-				}
-				database.Elevator54321 = aliveMsg.Elevator
+
+			if !manager.IsElevatorInDatabase(aliveMsg.ElevatorID, database) {
+				database.ElevatorsInNetwork = append(database.ElevatorsInNetwork, aliveMsg.Elevator)
+				database.NumElevators++
 			}
+
+			manager.UpdateDatabase(aliveMsg, database)
+
+			/*
+				switch aliveMsg.ElevatorID {
+				case "13520":
+					if aliveMsg.Elevator.Operating != elevator.WS_NoMotor {
+						aliveMsg.Elevator.Operating = elevator.WS_Running
+					}
+					database.Elevator13520 = aliveMsg.Elevator
+				case "70310":
+					if aliveMsg.Elevator.Operating != elevator.WS_NoMotor {
+						fmt.Println("-------Vi er inne i running----------------")
+						aliveMsg.Elevator.Operating = elevator.WS_Running
+					}
+					//elevator.ElevatorPrint(database.Elevator13520)
+					database.Elevator70310 = aliveMsg.Elevator
+				case "54321":
+					if aliveMsg.Elevator.Operating != elevator.WS_NoMotor {
+						aliveMsg.Elevator.Operating = elevator.WS_Running
+					}
+					database.Elevator54321 = aliveMsg.Elevator
+				}*/
 
 			//fmt.Printf("Recivied IAMALIVE:  %#v\n", aliveMsg)
 		}
