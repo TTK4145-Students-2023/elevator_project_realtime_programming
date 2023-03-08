@@ -72,8 +72,8 @@ func ElevatorPrint(es Elevator) {
 	fmt.Printf("  |floor = %-2d         |\n", es.Floor)
 	fmt.Printf("  |dirn  = %-12.12s|\n", DirnToString(es.Dirn))
 	fmt.Printf("  |behav = %-12.12s|\n", ebToString(es.Behaviour))
-	fmt.Printf("  |door = %-2s          |\n", es.DoorOpen)
-	fmt.Printf("  |operating = %-2s         |\n", es.Operating)
+	fmt.Printf("  |door = %-2d          |\n", es.DoorOpen)
+	fmt.Printf("  |operating =         |\n", es.Operating)
 	fmt.Println("  +--------------------+")
 	fmt.Println("  |  | up  | dn  | cab |")
 	for f := numFloors - 1; f >= 0; f-- {
@@ -98,10 +98,6 @@ func Elevator_uninitialized(myID string) Elevator {
 	elev.ElevatorID = myID
 	elev.Operating = WS_Unconnected
 	elev.OrderNumber = 0
-	//elevio.SetDoorOpenLamp(false)
-
-	//elev.LocalTimer = time.NewTimer(0.001*time.Second)
-	//Fsm_onDoorTimeout kan bli lei seg av at vi er i etg -10
 
 	return elev
 }

@@ -147,9 +147,9 @@ func Requests_clearOnFloor(arrivedElevatorID string, floor int) {
 		elevator.requests[floor][elevio.BT_HallUp].order = false
 		elevator.requests[floor][elevio.BT_HallUp].elevatorID = ""
 	}
-	SetAllLights(elevator)
- }
 
+	SetAllLights(elevator)
+}
 
 // ////////////////////////
 /*func Requests_clearFloorOrders(floor int) {

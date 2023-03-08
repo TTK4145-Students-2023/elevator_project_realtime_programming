@@ -1,10 +1,9 @@
 package manager
 
 import (
-	"Driver-go/elevio"
 	"Driver-go/elevator"
+	"Driver-go/elevio"
 	"math"
-
 )
 
 // Constants
@@ -34,9 +33,8 @@ func calculateCost(e *elevator.Elevator, order elevio.ButtonEvent) float64 {
 		cost += directionChangeCost
 	}
 
-
 	if (currDir == elevio.MD_Up && order.Button == elevio.BT_HallDown) ||
-	 (currDir == elevio.MD_Down && order.Button == elevio.BT_HallUp) {
+		(currDir == elevio.MD_Down && order.Button == elevio.BT_HallUp) {
 		cost += buttonChangeCost
 	}
 
@@ -46,7 +44,7 @@ func calculateCost(e *elevator.Elevator, order elevio.ButtonEvent) float64 {
 	return cost
 }
 
-// Helper function to calculate direction to travel inudp 
+// Helper function to calculate direction to travel inudp
 
 func getDirection(fromFloor, toFloor int) elevio.MotorDirection {
 	if fromFloor < toFloor {
@@ -56,7 +54,6 @@ func getDirection(fromFloor, toFloor int) elevio.MotorDirection {
 	}
 	return elevio.MD_Stop
 }
-
 
 // Helper function to calculate waiting time cost
 func waitingTimeCost(e *elevator.Elevator) float64 {

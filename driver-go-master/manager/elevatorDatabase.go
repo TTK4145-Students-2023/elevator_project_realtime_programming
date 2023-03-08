@@ -8,8 +8,6 @@ import (
 type ElevatorDatabase struct {
 	NumElevators       int
 	ElevatorsInNetwork []elevator.Elevator
-
-	//ElevatorsInNetwork [2]elevator.Elevator
 }
 
 func AssignOrderToElevator(database ElevatorDatabase, order elevio.ButtonEvent) string {
@@ -54,39 +52,3 @@ func UpdateDatabase(aliveMsg elevator.IAmAliveMessageStruct, database ElevatorDa
 		}
 	}
 }
-
-func ElevatorFloor(orderMsg elevator.OrderMessageStruct, database ElevatorDatabase) int {
-	for i := 0; i < database.NumElevators; i++ {
-		if database.ElevatorsInNetwork[i].ElevatorID == orderMsg.ChosenElevator { //Sjekker at calgt heis ikke er unconnected
-			return database.ElevatorsInNetwork[i].Floor
-		}
-	}
-
-	return 1000000
-}
-
-/*
-
-func ElevatorsInNetwork(database ElevatorDatabase) []elevator.Elevator{
-	var elevatorsInNetwork []elevator.Elevator
-
-	i := 0
-
-	if database.Elevator13520.Operating == elevator.WS_Running {
-		elevatorsInNetwork[i] = database.Elevator13520
-		i++
-	}
-
-	if database.Elevator70310.Operating == elevator.WS_Running{
-		elevatorsInNetwork[i] = database.Elevator70310
-		i++
-	}
-
-	if database.Elevator54321.Operating == elevator.WS_Running {
-		elevatorsInNetwork[i] = database.Elevator54321
-		i++
-	}
-
-	return elevatorsInNetwork
-}
-*/
