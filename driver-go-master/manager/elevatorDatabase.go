@@ -9,8 +9,6 @@ type ElevatorDatabase struct {
 	NumElevators       int
 	ElevatorsInNetwork []elevator.Elevator
 
-	
-
 	//ElevatorsInNetwork [2]elevator.Elevator
 }
 
@@ -20,7 +18,7 @@ func AssignOrderToElevator(database ElevatorDatabase, order elevio.ButtonEvent) 
 	elevatorID := ""
 
 	connectedElevators := database.ElevatorsInNetwork
-	
+
 	if order.Button == elevio.BT_Cab {
 		elevatorID = elevator.MyID
 	} else {
@@ -55,6 +53,16 @@ func UpdateDatabase(aliveMsg elevator.IAmAliveMessageStruct, database ElevatorDa
 			database.ElevatorsInNetwork[i] = aliveMsg.Elevator
 		}
 	}
+}
+
+func ElevatorFloor(orderMsg elevator.OrderMessageStruct, database ElevatorDatabase) int {
+	for i := 0; i < database.NumElevators; i++ {
+		if database.ElevatorsInNetwork[i].ElevatorID == orderMsg.ChosenElevator { //Sjekker at calgt heis ikke er unconnected
+			return database.ElevatorsInNetwork[i].Floor
+		}
+	}
+
+	return 1000000
 }
 
 /*

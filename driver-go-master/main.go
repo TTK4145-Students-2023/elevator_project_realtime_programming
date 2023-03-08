@@ -174,6 +174,10 @@ func main() {
 			if orderBroadcast.OrderedButton.Button != elevio.BT_Cab {
 				elevator.Elevator_increaseOrderNumber()
 			}
+			//if chosenElev already on floor -> Request_clearOnFloor
+			if manager.ElevatorFloor(orderBroadcast, database) == orderBroadcast.OrderedButton.Floor {
+				elevator.Requests_clearOnFloor(orderBroadcast.ElevatorID, orderBroadcast.OrderedButton.Floor)
+			}
 
 			if (orderBroadcast.OrderedButton.Button == elevio.BT_Cab && orderBroadcast.ChosenElevator == elevator.MyID) ||
 				orderBroadcast.OrderedButton.Button != elevio.BT_Cab {

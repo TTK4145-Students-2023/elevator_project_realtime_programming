@@ -6,11 +6,9 @@ import (
 	"time"
 )
 
-const MyID = "70310"
+const MyID = "12345"
 
 var elevator = Elevator_uninitialized(MyID)
-
-
 
 func Fsm_init() {
 	elevator = Elevator_uninitialized(MyID)
@@ -43,6 +41,7 @@ func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType, chosenEle
 		case EB_DoorOpen:
 			if Requests_shouldClearImmediately(elevator, btnFloor, btnType) {
 				timer.Reset(3 * time.Second)
+				fmt.Println("Her kan vi kjøre clearOnFloor()")
 			} else {
 				elevator.requests[btnFloor][btnType].order = true
 				elevator.requests[btnFloor][btnType].elevatorID = chosenElevator
@@ -79,6 +78,7 @@ func Fsm_onFloorArrival(newFloor int, timer *time.Timer) {
 	ElevatorPrint(elevator)
 
 	elevator.Floor = newFloor
+	elevio.SetFloorIndicator(newFloor)
 
 	switch elevator.Behaviour {
 	case EB_Moving:
