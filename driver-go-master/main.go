@@ -176,6 +176,10 @@ func main() {
 				elevator.Fsm_onRequestButtonPress(orderBroadcast.OrderedButton.Floor, orderBroadcast.OrderedButton.Button, orderBroadcast.ChosenElevator, timer)
 			}
 
+			if manager.WhatFloorIsElevator(database, orderBroadcast.ChosenElevator) == orderBroadcast.OrderedButton.Floor {
+				elevator.Requests_clearOnFloor(orderBroadcast.ElevatorID, orderBroadcast.OrderedButton.Floor)
+			}
+
 			//fmt.Printf("Received database: %#v\n", database)
 
 		case aliveMsg := <-aliveRx:

@@ -10,6 +10,8 @@ type ElevatorDatabase struct {
 	ElevatorsInNetwork []elevator.Elevator
 }
 
+
+
 func AssignOrderToElevator(database ElevatorDatabase, order elevio.ButtonEvent) string {
 
 	lowCost := 100000.0
@@ -51,4 +53,14 @@ func UpdateDatabase(aliveMsg elevator.IAmAliveMessageStruct, database ElevatorDa
 			database.ElevatorsInNetwork[i] = aliveMsg.Elevator
 		}
 	}
+}
+
+func WhatFloorIsElevator(database ElevatorDatabase, elevatorID string) int{
+
+	for i := 0; i < database.NumElevators; i++{
+		if database.ElevatorsInNetwork[i].ElevatorID == elevatorID{
+			return database.ElevatorsInNetwork[i].Floor
+		}
+	}
+	return -1
 }

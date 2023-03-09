@@ -36,7 +36,7 @@ func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType, chosenEle
 	//fmt.Printf("\n\n%s(%d, %s)\n", "fsm_onRequestButtonPress", btnFloor, btnType.ToString())
 	ElevatorPrint(elevator)
 	//fmt.Println(calculateCost(&elevator, btnFloor))
-
+	fmt.Println("----inne i on req buttonpress------------")
 	if !elevator.requests[btnFloor][btnType].order { //La til denne for å sikre at man ikke omfordeler en ordre dersom en knapp blir trykket på flere ganger
 		switch elevator.Behaviour {
 		case EB_DoorOpen:
