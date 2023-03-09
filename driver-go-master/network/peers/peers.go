@@ -12,6 +12,8 @@ type PeerUpdate struct {
 	Peers []string
 	New   string
 	Lost  []string
+
+	
 }
 
 const interval = 15 * time.Millisecond
@@ -43,7 +45,7 @@ func Receiver(port int, peerUpdateCh chan<- PeerUpdate) {
 	conn := conn.DialBroadcastUDP(port)
 
 	for {
-		updated := false
+		//updated := false
 
 		conn.SetReadDeadline(time.Now().Add(interval))
 		n, _, _ := conn.ReadFrom(buf[0:])
@@ -55,7 +57,7 @@ func Receiver(port int, peerUpdateCh chan<- PeerUpdate) {
 		if id != "" {
 			if _, idExists := lastSeen[id]; !idExists {
 				p.New = id
-				updated = true
+				//updated = true
 			}
 
 			lastSeen[id] = time.Now()
@@ -65,14 +67,14 @@ func Receiver(port int, peerUpdateCh chan<- PeerUpdate) {
 		p.Lost = make([]string, 0)
 		for k, v := range lastSeen {
 			if time.Now().Sub(v) > timeout {
-				updated = true
+				//updated = true
 				p.Lost = append(p.Lost, k)
 				delete(lastSeen, k)
 			}
 		}
 
 		// Sending update
-		if updated {
+		for {
 			p.Peers = make([]string, 0, len(lastSeen))
 
 			for k, _ := range lastSeen {
@@ -82,6 +84,7 @@ func Receiver(port int, peerUpdateCh chan<- PeerUpdate) {
 			sort.Strings(p.Peers)
 			sort.Strings(p.Lost)
 			peerUpdateCh <- p
+			time.Sleep(1* time.Second)
 		}
 	}
 }
