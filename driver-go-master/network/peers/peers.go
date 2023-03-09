@@ -12,8 +12,6 @@ type PeerUpdate struct {
 	Peers []string
 	New   string
 	Lost  []string
-
-	
 }
 
 const interval = 15 * time.Millisecond
@@ -73,10 +71,8 @@ func Receiver(port int, peerUpdateCh chan<- PeerUpdate) {
 			}
 		}
 
-		
-
 		// Sending update
-		if updated{
+		if updated {
 			p.Peers = make([]string, 0, len(lastSeen))
 
 			for k, _ := range lastSeen {
@@ -86,7 +82,6 @@ func Receiver(port int, peerUpdateCh chan<- PeerUpdate) {
 			sort.Strings(p.Peers)
 			sort.Strings(p.Lost)
 			peerUpdateCh <- p
-			time.Sleep(1* time.Second)
 		}
 	}
 }
