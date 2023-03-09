@@ -170,14 +170,20 @@ func main() {
 			if orderBroadcast.OrderedButton.Button != elevio.BT_Cab {
 				elevator.Elevator_increaseOrderNumber()
 			}
+
+	
+
 			//if chosenElev already on floor -> Request_clearOnFloor
 			if (orderBroadcast.OrderedButton.Button == elevio.BT_Cab && orderBroadcast.ChosenElevator == elevator.MyID) ||
 				orderBroadcast.OrderedButton.Button != elevio.BT_Cab {
 				elevator.Fsm_onRequestButtonPress(orderBroadcast.OrderedButton.Floor, orderBroadcast.OrderedButton.Button, orderBroadcast.ChosenElevator, timer)
 			}
 
+			//HER LA VI TIL EN SJEKK OM CHOSEN ELEVTAOR ER I ETASJEN TIL BESTILLINGEN ALLEREDE, hvis den er det skal bestillingen cleares med en gang. 
+			//burde sikkert være innbakt et annet sted.
 			if manager.WhatFloorIsElevator(database, orderBroadcast.ChosenElevator) == orderBroadcast.OrderedButton.Floor {
-				elevator.Requests_clearOnFloor(orderBroadcast.ElevatorID, orderBroadcast.OrderedButton.Floor)
+				fmt.Printf("INNNE I WHATFLOOR IS ELEV!!!----------------------------------------------")
+				elevator.Requests_clearOnFloor(orderBroadcast.ChosenElevator, orderBroadcast.OrderedButton.Floor)
 			}
 
 			//fmt.Printf("Received database: %#v\n", database)
