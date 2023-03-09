@@ -202,6 +202,13 @@ func main() {
 			fmt.Printf("  New:      %q\n", p.New)
 			fmt.Printf("  Lost:     %q\n", p.Lost)
 
+			for i := 0; i < len(p.Lost); i++ {
+				idElevator := p.Lost[i]
+				if idElevator == database.ElevatorsInNetwork[i].ElevatorID {
+					database.ElevatorsInNetwork[i].Operating = elevator.WS_Unconnected
+				}
+			}
+
 		}
 
 		//case: mottatt broadcast-ordre
