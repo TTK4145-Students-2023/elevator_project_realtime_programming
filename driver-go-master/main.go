@@ -109,7 +109,7 @@ func main() {
 		select {
 		case floor := <-drv_floors:
 			floorMsg := elevator.FloorArrivalMessageStruct{SystemID: "Gruppe10",
-				MessageID:    "Order",
+				MessageID:    "Floor",
 				ElevatorID:   elevator.MyID,
 				ArrivedFloor: floor}
 
@@ -202,12 +202,14 @@ func main() {
 			fmt.Printf("  New:      %q\n", p.New)
 			fmt.Printf("  Lost:     %q\n", p.Lost)
 
-			for i := 0; i < len(p.Lost); i++ {
-				idElevator := p.Lost[i]
-				if idElevator == database.ElevatorsInNetwork[i].ElevatorID {
+
+			//FUNKSION FOR Å SETTE HEIS TIL UNCONNECTED
+			for i := 0; i < len(database.ElevatorsInNetwork); i++ {
+				if !peers.IsPeerOnNetwork(database.ElevatorsInNetwork[i], p){
 					database.ElevatorsInNetwork[i].Operating = elevator.WS_Unconnected
 				}
 			}
+			//lage funskjon checkpeerOnNetwork
 
 		}
 
