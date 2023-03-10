@@ -48,8 +48,8 @@ func main() {
 	// We can disable/enable the transmitter after it has been started.
 	// This could be used to signal that we are somehow "unavailable".
 	peerTxEnable := make(chan bool)
-	go peers.Transmitter(15601, id, peerTxEnable) //15647
-	go peers.Receiver(15601, peerUpdateCh)
+	go peers.Transmitter(15600, id, peerTxEnable) //15647
+	go peers.Receiver(15600, peerUpdateCh)
 
 	// We make channels for sending and receiving our custom data types
 	//helloTx := make(chan HelloMsg)
@@ -84,7 +84,7 @@ func main() {
 
 	inputPollRateMs := 25
 
-	elevio.Init("localhost:14000", nFloors) //endre denne for å bruke flere sockets for elevcd //15657
+	elevio.Init("localhost:15657", nFloors) //endre denne for å bruke flere sockets for elevcd //15657
 
 	drv_buttons := make(chan elevio.ButtonEvent)
 	drv_floors := make(chan int)
