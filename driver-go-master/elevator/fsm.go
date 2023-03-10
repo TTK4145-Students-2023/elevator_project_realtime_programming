@@ -98,7 +98,7 @@ func Fsm_onFloorArrival(newFloor int, timer *time.Timer) {
 	ElevatorPrint(elevator)
 }
 
-func Fsm_onDoorTimeout() {
+func Fsm_onDoorTimeout(timer *time.Timer) {
 	//fmt.Printf("\n\n%s()\n", runtime.FuncForPC(reflect.ValueOf(fsm_onDoorTimeout).Pointer()).Name())
 	//ElevatorPrint(elevator)
 
@@ -111,6 +111,7 @@ func Fsm_onDoorTimeout() {
 		switch elevator.Behaviour {
 		case EB_DoorOpen:
 			elevator = Requests_clearAtCurrentFloor(elevator)
+			timer.Reset(3 * time.Second)
 			SetAllLights(elevator)
 		case EB_Moving, EB_Idle:
 			fmt.Printf("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")

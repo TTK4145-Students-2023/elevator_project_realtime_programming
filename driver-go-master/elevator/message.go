@@ -44,6 +44,6 @@ func SendIAmAlive(aliveTx chan IAmAliveMessageStruct) {
 	for {
 		aliveMsg.Elevator = elevator //oppdaterer heismelding
 		aliveTx <- aliveMsg
-		time.Sleep(1 * time.Second)
+		time.Sleep(100 * time.Millisecond)
 	}
 }

@@ -14,6 +14,7 @@ const (
 	EB_Idle = iota
 	EB_Moving
 	EB_DoorOpen
+	EB_Undefined
 )
 
 type WorkingState int

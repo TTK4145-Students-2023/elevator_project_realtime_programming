@@ -139,12 +139,11 @@ func Requests_clearOnFloor(arrivedElevatorID string, floor int) {
 	//så er det jo en ordre der.
 	//OBS! Må sjekke state til heis fordi det kan skje at den ikke skal cleare. Litt mer kopi av Req_clearAtCurrFloor(). Eks: hente ut state fra database
 
-
 	if elevator.requests[floor][elevio.BT_HallDown].order &&
 		(arrivedElevatorID == elevator.requests[floor][elevio.BT_HallDown].elevatorID) {
 		elevator.requests[floor][elevio.BT_HallDown].order = false
 		elevator.requests[floor][elevio.BT_HallDown].elevatorID = ""
-		elevio.SetButtonLamp(elevio.BT_HallDown, floor, false)// La til denne men vet ikke hvorfor denne må være her siden setAlllights egentlig skal cleare lyset nederst
+		elevio.SetButtonLamp(elevio.BT_HallDown, floor, false) // La til denne men vet ikke hvorfor denne må være her siden setAlllights egentlig skal cleare lyset nederst
 	} else if elevator.requests[floor][elevio.BT_HallUp].order &&
 		(arrivedElevatorID == elevator.requests[floor][elevio.BT_HallUp].elevatorID) {
 		elevator.requests[floor][elevio.BT_HallUp].order = false

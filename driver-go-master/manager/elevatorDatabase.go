@@ -3,6 +3,7 @@ package manager
 import (
 	"Driver-go/elevator"
 	"Driver-go/elevio"
+	"Driver-go/network/peers"
 )
 
 type ElevatorDatabase struct {
@@ -42,6 +43,7 @@ func IsElevatorInDatabase(elevatorID string, database ElevatorDatabase) bool {
 }
 
 func UpdateDatabase(aliveMsg elevator.IAmAliveMessageStruct, database ElevatorDatabase) {
+
 	if aliveMsg.Elevator.Operating != elevator.WS_NoMotor {
 		aliveMsg.Elevator.Operating = elevator.WS_Running //OBS! Nå håndterer vi running-state som connected
 	}
@@ -53,7 +55,7 @@ func UpdateDatabase(aliveMsg elevator.IAmAliveMessageStruct, database ElevatorDa
 	}
 }
 
-func WhatFloorIsElevator(database ElevatorDatabase, elevatorID string) int {
+func WhatFloorIsElevatorFromStringID(database ElevatorDatabase, elevatorID string) int {
 
 	for i := 0; i < database.NumElevators; i++ {
 		if database.ElevatorsInNetwork[i].ElevatorID == elevatorID {
@@ -61,4 +63,22 @@ func WhatFloorIsElevator(database ElevatorDatabase, elevatorID string) int {
 		}
 	}
 	return -1
+}
+
+func WhatStateIsElevatorFromStringID(database ElevatorDatabase, elevatorID string) elevator.ElevatorBehaviour{
+	for i := 0; i < database.NumElevators; i++ {
+		if database.ElevatorsInNetwork[i].ElevatorID == elevatorID {
+			return database.ElevatorsInNetwork[i].Behaviour
+		}
+	}
+	return elevator.EB_Undefined
+}
+
+
+func UpdateElevatorNetworkStateInDatabase(peerUpdate peers.PeerUpdate, database ElevatorDatabase) {
+	for i := 0; i < len(database.ElevatorsInNetwork); i++ {
+		if !peers.IsPeerOnNetwork(database.ElevatorsInNetwork[i], peerUpdate) {
+			database.ElevatorsInNetwork[i].Operating = elevator.WS_Unconnected
+		}
+	}
 }

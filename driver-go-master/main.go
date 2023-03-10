@@ -14,7 +14,8 @@ import (
 )
 
 const nFloors = 4
-const nButtons = 3
+
+//const nButtons = 3
 
 type HelloMsg struct {
 	Message string
@@ -147,12 +148,12 @@ func main() {
 
 			//elevator.Fsm_onRequestButtonPress(button.Floor, button.Button) //droppe denne
 
-		case timer := <-timer.C:
+		case timedOut := <-timer.C:
 			fmt.Println("fått lest fra timer.C")
 
-			fmt.Print(timer)
+			fmt.Print(timedOut)
 
-			elevator.Fsm_onDoorTimeout()
+			elevator.Fsm_onDoorTimeout(timer)
 
 		case obstruction := <-drv_obstr:
 			if elevator.IsDoorOpen() && obstruction {
@@ -179,8 +180,8 @@ func main() {
 
 			//HER LA VI TIL EN SJEKK OM CHOSEN ELEVTAOR ER I ETASJEN TIL BESTILLINGEN ALLEREDE, hvis den er det skal bestillingen cleares med en gang.
 			//burde sikkert være innbakt et annet sted.
-			if manager.WhatFloorIsElevator(database, orderBroadcast.ChosenElevator) == orderBroadcast.OrderedButton.Floor {
-				fmt.Printf("INNNE I WHATFLOOR IS ELEV!!!----------------------------------------------")
+			if manager.WhatFloorIsElevatorFromStringID(database, orderBroadcast.ChosenElevator) == orderBroadcast.OrderedButton.Floor &&
+				manager.WhatStateIsElevatorFromStringID(database, orderBroadcast.ChosenElevator) != elevator.EB_Moving {
 				elevator.Requests_clearOnFloor(orderBroadcast.ChosenElevator, orderBroadcast.OrderedButton.Floor)
 			}
 
@@ -202,13 +203,7 @@ func main() {
 			fmt.Printf("  New:      %q\n", p.New)
 			fmt.Printf("  Lost:     %q\n", p.Lost)
 
-
-			//FUNKSION FOR Å SETTE HEIS TIL UNCONNECTED
-			for i := 0; i < len(database.ElevatorsInNetwork); i++ {
-				if !peers.IsPeerOnNetwork(database.ElevatorsInNetwork[i], p){
-					database.ElevatorsInNetwork[i].Operating = elevator.WS_Unconnected
-				}
-			}
+			manager.UpdateElevatorNetworkStateInDatabase(p, database)
 			//lage funskjon checkpeerOnNetwork
 
 		}
