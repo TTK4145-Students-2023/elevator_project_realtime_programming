@@ -48,8 +48,8 @@ func main() {
 	// We can disable/enable the transmitter after it has been started.
 	// This could be used to signal that we are somehow "unavailable".
 	peerTxEnable := make(chan bool)
-	go peers.Transmitter(15647, id, peerTxEnable)
-	go peers.Receiver(15647, peerUpdateCh)
+	go peers.Transmitter(15601, id, peerTxEnable) //15647
+	go peers.Receiver(15601, peerUpdateCh)
 
 	// We make channels for sending and receiving our custom data types
 	//helloTx := make(chan HelloMsg)
@@ -84,7 +84,7 @@ func main() {
 
 	inputPollRateMs := 25
 
-	elevio.Init("localhost:15657", nFloors)
+	elevio.Init("localhost:14000", nFloors) //endre denne for å bruke flere sockets for elevcd //15657
 
 	drv_buttons := make(chan elevio.ButtonEvent)
 	drv_floors := make(chan int)
@@ -204,7 +204,17 @@ func main() {
 			fmt.Printf("  Lost:     %q\n", p.Lost)
 
 			manager.UpdateElevatorNetworkStateInDatabase(p, database)
-			//lage funskjon checkpeerOnNetwork
+
+			for i := 0; i < len(p.Lost); i++ {
+				if p.Lost[i] != "" {
+					manager.ReassignDeadOrders(database, p.Lost[i])
+				}
+			}
+
+			//omfordel(database, død elev) { ser på databasen hvilke ordre som var tagga med iden til død heis og kaller
+
+			//for i := 0; i < len(p.New); i++ {
+			// 	reload orders
 
 		}
 

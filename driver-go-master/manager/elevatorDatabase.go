@@ -33,6 +33,23 @@ func AssignOrderToElevator(database ElevatorDatabase, order elevio.ButtonEvent) 
 	return elevatorID
 }
 
+func ReassignDeadOrders(database ElevatorDatabase, deadElevatorID string) {
+	deadElev := GetElevatorFromID(database, deadElevatorID)
+	for floor := 0; floor < elevator.NumFloors; floor++ {
+		for button := 0; button < elevator.NumButtons; button++ {
+			var order elevio.ButtonEvent
+			order.Button = elevio.ButtonType(button)
+			order.Floor = floor
+
+			if deadElev.Requests[floor][button].ElevatorID == deadElevatorID {
+				AssignOrderToElevator(database, order)
+			}
+		}
+
+	}
+
+}
+
 func IsElevatorInDatabase(elevatorID string, database ElevatorDatabase) bool {
 	for i := 0; i < database.NumElevators; i++ {
 		if database.ElevatorsInNetwork[i].ElevatorID == elevatorID { //Sjekker at calgt heis ikke er unconnected
@@ -65,7 +82,7 @@ func WhatFloorIsElevatorFromStringID(database ElevatorDatabase, elevatorID strin
 	return -1
 }
 
-func WhatStateIsElevatorFromStringID(database ElevatorDatabase, elevatorID string) elevator.ElevatorBehaviour{
+func WhatStateIsElevatorFromStringID(database ElevatorDatabase, elevatorID string) elevator.ElevatorBehaviour {
 	for i := 0; i < database.NumElevators; i++ {
 		if database.ElevatorsInNetwork[i].ElevatorID == elevatorID {
 			return database.ElevatorsInNetwork[i].Behaviour
@@ -74,11 +91,20 @@ func WhatStateIsElevatorFromStringID(database ElevatorDatabase, elevatorID strin
 	return elevator.EB_Undefined
 }
 
-
 func UpdateElevatorNetworkStateInDatabase(peerUpdate peers.PeerUpdate, database ElevatorDatabase) {
 	for i := 0; i < len(database.ElevatorsInNetwork); i++ {
 		if !peers.IsPeerOnNetwork(database.ElevatorsInNetwork[i], peerUpdate) {
 			database.ElevatorsInNetwork[i].Operating = elevator.WS_Unconnected
 		}
 	}
+}
+
+func GetElevatorFromID(database ElevatorDatabase, elevatorID string) elevator.Elevator {
+	var e elevator.Elevator
+	for i := 0; i < database.NumElevators; i++ {
+		if database.ElevatorsInNetwork[i].ElevatorID == elevatorID {
+			return database.ElevatorsInNetwork[i]
+		}
+	}
+	return e
 }

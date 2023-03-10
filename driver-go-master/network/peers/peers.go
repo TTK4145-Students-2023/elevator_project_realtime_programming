@@ -145,7 +145,7 @@ func Receiver(port int, peerUpdateCh chan<- PeerUpdate) {
 	}
 }
 
-func IsPeerOnNetwork(elevator elevator.Elevator, peerUpdate  PeerUpdate) bool{
+func IsPeerOnNetwork(elevator elevator.Elevator, peerUpdate PeerUpdate) bool {
 
 	for i := 0; i < len(peerUpdate.Peers); i++ {
 		idElevator := peerUpdate.Peers[i]
@@ -155,7 +155,3 @@ func IsPeerOnNetwork(elevator elevator.Elevator, peerUpdate  PeerUpdate) bool{
 	}
 	return false
 }
-
-
-
-

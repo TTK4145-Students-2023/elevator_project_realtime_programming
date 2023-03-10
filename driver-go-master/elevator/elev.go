@@ -5,8 +5,8 @@ import (
 	"fmt"
 )
 
-const numFloors = 4
-const numButtons = 3
+const NumFloors = 4
+const NumButtons = 3
 
 type ElevatorBehaviour int
 
@@ -27,14 +27,14 @@ const (
 
 type OrderpanelPair struct {
 	order      bool
-	elevatorID string
+	ElevatorID string
 }
 
 type Elevator struct {
 	Floor       int
 	ElevatorID  string
 	Dirn        elevio.MotorDirection
-	requests    [numFloors][numButtons]OrderpanelPair
+	Requests    [NumFloors][NumButtons]OrderpanelPair
 	Behaviour   ElevatorBehaviour
 	DoorOpen    bool
 	Operating   WorkingState
@@ -77,14 +77,14 @@ func ElevatorPrint(es Elevator) {
 	fmt.Printf("  |operating =         |\n", es.Operating)
 	fmt.Println("  +--------------------+")
 	fmt.Println("  |  | up  | dn  | cab |")
-	for f := numFloors - 1; f >= 0; f-- {
+	for f := NumFloors - 1; f >= 0; f-- {
 		fmt.Printf("  | %d", f)
-		for btn := 0; btn < numButtons; btn++ {
-			if (f == numButtons-1 && btn == int(elevio.BT_HallUp)) ||
+		for btn := 0; btn < NumButtons; btn++ {
+			if (f == NumButtons-1 && btn == int(elevio.BT_HallUp)) ||
 				(f == 0 && btn == int(elevio.BT_HallDown)) {
 				fmt.Print("|    ")
 			} else {
-				fmt.Print(es.requests[f][btn])
+				fmt.Print(es.Requests[f][btn])
 			}
 		}
 		fmt.Print("|\n")
