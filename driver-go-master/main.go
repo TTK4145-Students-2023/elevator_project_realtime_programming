@@ -205,13 +205,14 @@ func main() {
 
 			manager.UpdateElevatorNetworkStateInDatabase(p, database)
 
-			for i := 0; i < len(p.Lost); i++ {
-				if p.Lost[i] != "" {
+			//legg dette inn i updatenetwork state
+			if len(p.Lost) != 0 {
+				for i := 0; i < len(p.Lost); i++ {
 					manager.ReassignDeadOrders(database, p.Lost[i])
 				}
 			}
 
-			//omfordel(database, død elev) { ser på databasen hvilke ordre som var tagga med iden til død heis og kaller
+			//if p.New != ""
 
 			//for i := 0; i < len(p.New); i++ {
 			// 	reload orders

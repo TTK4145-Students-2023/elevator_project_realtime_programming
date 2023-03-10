@@ -96,6 +96,7 @@ func UpdateElevatorNetworkStateInDatabase(peerUpdate peers.PeerUpdate, database 
 		if !peers.IsPeerOnNetwork(database.ElevatorsInNetwork[i], peerUpdate) {
 			database.ElevatorsInNetwork[i].Operating = elevator.WS_Unconnected
 		}
+
 	}
 }
 
