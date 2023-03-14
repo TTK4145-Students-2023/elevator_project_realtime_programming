@@ -61,10 +61,7 @@ func IsElevatorInDatabase(elevatorID string, database ElevatorDatabase) bool {
 
 func UpdateDatabase(aliveMsg elevator.IAmAliveMessageStruct, database ElevatorDatabase) {
 
-	if aliveMsg.Elevator.Operating != elevator.WS_NoMotor {
-		aliveMsg.Elevator.Operating = elevator.WS_Running //OBS! Nå håndterer vi running-state som connected
-	}
-
+	
 	for i := 0; i < database.NumElevators; i++ {
 		if database.ElevatorsInNetwork[i].ElevatorID == aliveMsg.ElevatorID {
 			database.ElevatorsInNetwork[i] = aliveMsg.Elevator
@@ -91,7 +88,7 @@ func WhatStateIsElevatorFromStringID(database ElevatorDatabase, elevatorID strin
 	return elevator.EB_Undefined
 }
 
-func UpdateElevatorNetworkStateInDatabase(peerUpdate peers.PeerUpdate, database ElevatorDatabase) {
+func DisconnectInDatabase(peerUpdate peers.PeerUpdate, database ElevatorDatabase) {
 	for i := 0; i < len(database.ElevatorsInNetwork); i++ {
 		if !peers.IsPeerOnNetwork(database.ElevatorsInNetwork[i], peerUpdate) {
 			database.ElevatorsInNetwork[i].Operating = elevator.WS_Unconnected
@@ -99,6 +96,10 @@ func UpdateElevatorNetworkStateInDatabase(peerUpdate peers.PeerUpdate, database 
 
 	}
 }
+
+
+
+
 
 func GetElevatorFromID(database ElevatorDatabase, elevatorID string) elevator.Elevator {
 	var e elevator.Elevator

@@ -190,11 +190,6 @@ func main() {
 		case aliveMsg := <-aliveRx:
 			//oppdater tilhørende heis i databasestruct (dette er for å regne cost)
 
-			if !manager.IsElevatorInDatabase(aliveMsg.ElevatorID, database) {
-				database.ElevatorsInNetwork = append(database.ElevatorsInNetwork, aliveMsg.Elevator)
-				database.NumElevators++
-			}
-
 			manager.UpdateDatabase(aliveMsg, database)
 
 		case p := <-peerUpdateCh:
@@ -203,16 +198,26 @@ func main() {
 			fmt.Printf("  New:      %q\n", p.New)
 			fmt.Printf("  Lost:     %q\n", p.Lost)
 
-			manager.UpdateElevatorNetworkStateInDatabase(p, database)
-
 			//legg dette inn i updatenetwork state
 			if len(p.Lost) != 0 {
+				manager.DisconnectInDatabase(p, database)
 				for i := 0; i < len(p.Lost); i++ {
 					manager.ReassignDeadOrders(database, p.Lost[i])
 				}
 			}
 
-			//if p.New != ""
+			if p.New != "" {
+				newElev := manager.GetElevatorFromID(database, p.New)
+
+				if !manager.IsElevatorInDatabase(p.New, database) {
+					database.ElevatorsInNetwork = append(database.ElevatorsInNetwork, newElev)
+					database.NumElevators++
+				}
+				if newElev.Operating != elevator.WS_NoMotor {
+					newElev.Operating = elevator.WS_Running //OBS! Nå håndterer vi running-state som connected
+				}
+
+			}
 
 			//for i := 0; i < len(p.New); i++ {
 			// 	reload orders
