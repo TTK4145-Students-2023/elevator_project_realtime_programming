@@ -134,7 +134,9 @@ func main() {
 			//Broadcaster fordelt ordre (med elevatorID)
 			//Hvis CAB-order: håndter internt (ikke broadcast)
 			//CAB-order deles ikke som en ordre, men som del av heis-tilstand/info
-			chosenElevator := manager.AssignOrderToElevator(database, button)
+			manager.SendOrderMessage(orderTx, button, database)
+
+			/*chosenElevator := manager.AssignOrderToElevator(database, button)
 
 			//Husk at vi skal fikse CAB som en egen greie
 			//pakk inn i melding og send
@@ -145,6 +147,7 @@ func main() {
 				ChosenElevator: chosenElevator}
 
 			orderTx <- orderMsg
+			*/
 
 			//elevator.Fsm_onRequestButtonPress(button.Floor, button.Button) //droppe denne
 
@@ -190,6 +193,11 @@ func main() {
 		case aliveMsg := <-aliveRx:
 			//oppdater tilhørende heis i databasestruct (dette er for å regne cost)
 
+			if !manager.IsElevatorInDatabase(aliveMsg.ElevatorID, database) {
+				database.ElevatorsInNetwork = append(database.ElevatorsInNetwork, aliveMsg.Elevator)
+				database.NumElevators++
+			}
+
 			manager.UpdateDatabase(aliveMsg, database)
 
 		case p := <-peerUpdateCh:
@@ -198,26 +206,16 @@ func main() {
 			fmt.Printf("  New:      %q\n", p.New)
 			fmt.Printf("  Lost:     %q\n", p.Lost)
 
+			manager.UpdateElevatorNetworkStateInDatabase(p, database)
+
 			//legg dette inn i updatenetwork state
 			if len(p.Lost) != 0 {
-				manager.DisconnectInDatabase(p, database)
 				for i := 0; i < len(p.Lost); i++ {
 					manager.ReassignDeadOrders(database, p.Lost[i])
 				}
 			}
 
-			if p.New != "" {
-				newElev := manager.GetElevatorFromID(database, p.New)
-
-				if !manager.IsElevatorInDatabase(p.New, database) {
-					database.ElevatorsInNetwork = append(database.ElevatorsInNetwork, newElev)
-					database.NumElevators++
-				}
-				if newElev.Operating != elevator.WS_NoMotor {
-					newElev.Operating = elevator.WS_Running //OBS! Nå håndterer vi running-state som connected
-				}
-
-			}
+			//if p.New != ""
 
 			//for i := 0; i < len(p.New); i++ {
 			// 	reload orders
