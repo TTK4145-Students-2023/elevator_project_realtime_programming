@@ -34,16 +34,21 @@ func AssignOrderToElevator(database ElevatorDatabase, order elevio.ButtonEvent) 
 	return elevatorID
 }
 
-func ReassignDeadOrders(database ElevatorDatabase, deadElevatorID string) {
+func ReassignDeadOrders(orderTx chan elevator.OrderMessageStruct, database ElevatorDatabase, deadElevatorID string) {
 	deadElev := GetElevatorFromID(database, deadElevatorID)
+	fmt.Println(" -----dead elevator id -----")
+	fmt.Println(deadElev.ElevatorID)
+	fmt.Println(("here are the orders"))
 	for floor := 0; floor < elevator.NumFloors; floor++ {
 		for button := 0; button < elevator.NumButtons; button++ {
 			var order elevio.ButtonEvent
 			order.Button = elevio.ButtonType(button)
 			order.Floor = floor
+			fmt.Println(deadElev.Requests[floor][button])
 
 			if deadElev.Requests[floor][button].ElevatorID == deadElevatorID {
-				AssignOrderToElevator(database, order)
+				fmt.Println("--------------FOUND DEADORDER--------------------------")
+				SendOrderMessage(orderTx, order, database)
 			}
 		}
 
@@ -112,15 +117,14 @@ func GetElevatorFromID(database ElevatorDatabase, elevatorID string) elevator.El
 	return e
 }
 
-
-func SendOrderMessage(orderTx chan elevator.OrderMessageStruct, button elevio.ButtonEvent, database ElevatorDatabase){
+func SendOrderMessage(orderTx chan elevator.OrderMessageStruct, button elevio.ButtonEvent, database ElevatorDatabase) {
 	chosenElevator := AssignOrderToElevator(database, button)
-	
+
 	orderMsg := elevator.OrderMessageStruct{SystemID: "Gruppe10",
-				MessageID:      "Order",
-				ElevatorID:     elevator.MyID,
-				OrderedButton:  button,
-				ChosenElevator: chosenElevator}
+		MessageID:      "Order",
+		ElevatorID:     elevator.MyID,
+		OrderedButton:  button,
+		ChosenElevator: chosenElevator}
 
 	orderTx <- orderMsg
 }

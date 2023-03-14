@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-const MyID = "15000"
+const MyID = "14000"
 
 var elevator = Elevator_uninitialized(MyID)
 
@@ -37,35 +37,35 @@ func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType, chosenEle
 	ElevatorPrint(elevator)
 	//fmt.Println(calculateCost(&elevator, btnFloor))
 	fmt.Println("----inne i on req buttonpress------------")
-	if !elevator.Requests[btnFloor][btnType].order { //La til denne for å sikre at man ikke omfordeler en ordre dersom en knapp blir trykket på flere ganger
-		switch elevator.Behaviour {
-		case EB_DoorOpen:
-			if Requests_shouldClearImmediately(elevator, btnFloor, btnType) {
-				timer.Reset(3 * time.Second)
-				fmt.Println("Her kan vi kjøre clearOnFloor()")
-			} else {
-				elevator.Requests[btnFloor][btnType].order = true
-				elevator.Requests[btnFloor][btnType].ElevatorID = chosenElevator
-			}
-		case EB_Moving:
+	//La til denne for å sikre at man ikke omfordeler en ordre dersom en knapp blir trykket på flere ganger
+	switch elevator.Behaviour {
+	case EB_DoorOpen:
+		if Requests_shouldClearImmediately(elevator, btnFloor, btnType) {
+			timer.Reset(3 * time.Second)
+			fmt.Println("Her kan vi kjøre clearOnFloor()")
+		} else {
 			elevator.Requests[btnFloor][btnType].order = true
 			elevator.Requests[btnFloor][btnType].ElevatorID = chosenElevator
-		case EB_Idle:
-			elevator.Requests[btnFloor][btnType].order = true
-			elevator.Requests[btnFloor][btnType].ElevatorID = chosenElevator
-			pair := Requests_chooseDirection(elevator)
-			elevator.Dirn = pair.dirn
-			elevator.Behaviour = pair.behaviour
-			switch pair.behaviour {
-			case EB_DoorOpen:
-				elevio.SetDoorOpenLamp(true)
-				timer.Reset(3 * time.Second)
-				elevator = Requests_clearAtCurrentFloor(elevator)
-			case EB_Moving:
-				elevio.SetMotorDirection(elevator.Dirn)
-			case EB_Idle:
-			}
 		}
+	case EB_Moving:
+		elevator.Requests[btnFloor][btnType].order = true
+		elevator.Requests[btnFloor][btnType].ElevatorID = chosenElevator
+	case EB_Idle:
+		elevator.Requests[btnFloor][btnType].order = true
+		elevator.Requests[btnFloor][btnType].ElevatorID = chosenElevator
+		pair := Requests_chooseDirection(elevator)
+		elevator.Dirn = pair.dirn
+		elevator.Behaviour = pair.behaviour
+		switch pair.behaviour {
+		case EB_DoorOpen:
+			elevio.SetDoorOpenLamp(true)
+			timer.Reset(3 * time.Second)
+			elevator = Requests_clearAtCurrentFloor(elevator)
+		case EB_Moving:
+			elevio.SetMotorDirection(elevator.Dirn)
+		case EB_Idle:
+		}
+
 	}
 
 	SetAllLights(elevator)

@@ -84,7 +84,7 @@ func main() {
 
 	inputPollRateMs := 25
 
-	elevio.Init("localhost:15657", nFloors) //endre denne for å bruke flere sockets for elevcd //15657
+	elevio.Init("localhost:"+id, nFloors) //endre denne for å bruke flere sockets for elevcd //15657
 
 	drv_buttons := make(chan elevio.ButtonEvent)
 	drv_floors := make(chan int)
@@ -211,7 +211,7 @@ func main() {
 			//legg dette inn i updatenetwork state
 			if len(p.Lost) != 0 {
 				for i := 0; i < len(p.Lost); i++ {
-					manager.ReassignDeadOrders(database, p.Lost[i])
+					manager.ReassignDeadOrders(orderTx, database, p.Lost[i])
 				}
 			}
 
