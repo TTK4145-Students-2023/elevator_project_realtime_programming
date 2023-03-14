@@ -10,9 +10,9 @@ type DirnBehaviourPair struct {
 }
 
 func Requests_above(e Elevator) bool {
-	for floor := e.Floor + 1; floor < numFloors; floor++ {
-		for btn := 0; btn < numButtons; btn++ {
-			if e.requests[floor][btn].order && e.requests[floor][btn].elevatorID == e.ElevatorID { //Antar at requests har verdi 1 om bestilling og null ellers
+	for floor := e.Floor + 1; floor < NumFloors; floor++ {
+		for btn := 0; btn < NumButtons; btn++ {
+			if e.Requests[floor][btn].order && e.Requests[floor][btn].ElevatorID == e.ElevatorID { //Antar at requests har verdi 1 om bestilling og null ellers
 				return true
 			}
 		}
@@ -23,8 +23,8 @@ func Requests_above(e Elevator) bool {
 
 func Requests_below(e Elevator) bool {
 	for floor := 0; floor < e.Floor; floor++ {
-		for btn := 0; btn < numButtons; btn++ {
-			if e.requests[floor][btn].order && e.requests[floor][btn].elevatorID == e.ElevatorID {
+		for btn := 0; btn < NumButtons; btn++ {
+			if e.Requests[floor][btn].order && e.Requests[floor][btn].ElevatorID == e.ElevatorID {
 				return true
 			}
 		}
@@ -35,8 +35,8 @@ func Requests_below(e Elevator) bool {
 
 func Requests_here(e Elevator) bool {
 
-	for btn := 0; btn < numButtons; btn++ {
-		if e.requests[e.Floor][btn].order && e.requests[e.Floor][btn].elevatorID == e.ElevatorID {
+	for btn := 0; btn < NumButtons; btn++ {
+		if e.Requests[e.Floor][btn].order && e.Requests[e.Floor][btn].ElevatorID == e.ElevatorID {
 			return true
 		}
 	}
@@ -84,13 +84,13 @@ func Requests_chooseDirection(e Elevator) DirnBehaviourPair {
 func Requests_shouldStop(e Elevator) bool {
 	switch e.Dirn {
 	case elevio.MD_Down:
-		return e.requests[e.Floor][elevio.BT_HallDown].order ||
-			e.requests[e.Floor][elevio.BT_Cab].order ||
+		return e.Requests[e.Floor][elevio.BT_HallDown].order ||
+			e.Requests[e.Floor][elevio.BT_Cab].order ||
 			!Requests_below(e) //mulig vi må legge til ID-sjekk
 
 	case elevio.MD_Up:
-		return e.requests[e.Floor][elevio.BT_HallUp].order ||
-			e.requests[e.Floor][elevio.BT_Cab].order ||
+		return e.Requests[e.Floor][elevio.BT_HallUp].order ||
+			e.Requests[e.Floor][elevio.BT_Cab].order ||
 			!Requests_above(e)
 
 	default:
@@ -106,30 +106,30 @@ func Requests_shouldClearImmediately(e Elevator, btn_floor int, btn_type elevio.
 
 func Requests_clearAtCurrentFloor(e Elevator) Elevator {
 	//Tanken: Alle går på heisen som stopper, så ordre må cleares uansett fordeling
-	e.requests[e.Floor][elevio.BT_Cab].order = false
-	e.requests[e.Floor][elevio.BT_Cab].elevatorID = ""
+	e.Requests[e.Floor][elevio.BT_Cab].order = false
+	e.Requests[e.Floor][elevio.BT_Cab].ElevatorID = ""
 	switch e.Dirn {
 	case elevio.MD_Up:
-		if !Requests_above(e) && !e.requests[e.Floor][elevio.BT_HallUp].order {
-			e.requests[e.Floor][elevio.BT_HallDown].order = false
-			e.requests[e.Floor][elevio.BT_HallDown].elevatorID = ""
+		if !Requests_above(e) && !e.Requests[e.Floor][elevio.BT_HallUp].order {
+			e.Requests[e.Floor][elevio.BT_HallDown].order = false
+			e.Requests[e.Floor][elevio.BT_HallDown].ElevatorID = ""
 		}
-		e.requests[e.Floor][elevio.BT_HallUp].order = false
-		e.requests[e.Floor][elevio.BT_HallUp].elevatorID = ""
+		e.Requests[e.Floor][elevio.BT_HallUp].order = false
+		e.Requests[e.Floor][elevio.BT_HallUp].ElevatorID = ""
 	case elevio.MD_Down:
-		if !Requests_below(e) && !e.requests[e.Floor][elevio.BT_HallDown].order {
-			e.requests[e.Floor][elevio.BT_HallUp].order = false
-			e.requests[e.Floor][elevio.BT_HallUp].elevatorID = ""
+		if !Requests_below(e) && !e.Requests[e.Floor][elevio.BT_HallDown].order {
+			e.Requests[e.Floor][elevio.BT_HallUp].order = false
+			e.Requests[e.Floor][elevio.BT_HallUp].ElevatorID = ""
 		}
-		e.requests[e.Floor][elevio.BT_HallDown].order = false
-		e.requests[e.Floor][elevio.BT_HallDown].elevatorID = ""
+		e.Requests[e.Floor][elevio.BT_HallDown].order = false
+		e.Requests[e.Floor][elevio.BT_HallDown].ElevatorID = ""
 	case elevio.MD_Stop:
 		fallthrough
 	default:
-		e.requests[e.Floor][elevio.BT_HallUp].order = false
-		e.requests[e.Floor][elevio.BT_HallUp].elevatorID = ""
-		e.requests[e.Floor][elevio.BT_HallDown].order = false
-		e.requests[e.Floor][elevio.BT_HallDown].elevatorID = ""
+		e.Requests[e.Floor][elevio.BT_HallUp].order = false
+		e.Requests[e.Floor][elevio.BT_HallUp].ElevatorID = ""
+		e.Requests[e.Floor][elevio.BT_HallDown].order = false
+		e.Requests[e.Floor][elevio.BT_HallDown].ElevatorID = ""
 	}
 	return e
 }
@@ -139,16 +139,15 @@ func Requests_clearOnFloor(arrivedElevatorID string, floor int) {
 	//så er det jo en ordre der.
 	//OBS! Må sjekke state til heis fordi det kan skje at den ikke skal cleare. Litt mer kopi av Req_clearAtCurrFloor(). Eks: hente ut state fra database
 
-
-	if elevator.requests[floor][elevio.BT_HallDown].order &&
-		(arrivedElevatorID == elevator.requests[floor][elevio.BT_HallDown].elevatorID) {
-		elevator.requests[floor][elevio.BT_HallDown].order = false
-		elevator.requests[floor][elevio.BT_HallDown].elevatorID = ""
-		elevio.SetButtonLamp(elevio.BT_HallDown, floor, false)// La til denne men vet ikke hvorfor denne må være her siden setAlllights egentlig skal cleare lyset nederst
-	} else if elevator.requests[floor][elevio.BT_HallUp].order &&
-		(arrivedElevatorID == elevator.requests[floor][elevio.BT_HallUp].elevatorID) {
-		elevator.requests[floor][elevio.BT_HallUp].order = false
-		elevator.requests[floor][elevio.BT_HallUp].elevatorID = ""
+	if elevator.Requests[floor][elevio.BT_HallDown].order &&
+		(arrivedElevatorID == elevator.Requests[floor][elevio.BT_HallDown].ElevatorID) {
+		elevator.Requests[floor][elevio.BT_HallDown].order = false
+		elevator.Requests[floor][elevio.BT_HallDown].ElevatorID = ""
+		elevio.SetButtonLamp(elevio.BT_HallDown, floor, false) // La til denne men vet ikke hvorfor denne må være her siden setAlllights egentlig skal cleare lyset nederst
+	} else if elevator.Requests[floor][elevio.BT_HallUp].order &&
+		(arrivedElevatorID == elevator.Requests[floor][elevio.BT_HallUp].ElevatorID) {
+		elevator.Requests[floor][elevio.BT_HallUp].order = false
+		elevator.Requests[floor][elevio.BT_HallUp].ElevatorID = ""
 		elevio.SetButtonLamp(elevio.BT_HallDown, floor, false) //HER OGSÅ
 	}
 

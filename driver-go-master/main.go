@@ -14,7 +14,8 @@ import (
 )
 
 const nFloors = 4
-const nButtons = 3
+
+//const nButtons = 3
 
 type HelloMsg struct {
 	Message string
@@ -47,8 +48,8 @@ func main() {
 	// We can disable/enable the transmitter after it has been started.
 	// This could be used to signal that we are somehow "unavailable".
 	peerTxEnable := make(chan bool)
-	go peers.Transmitter(15647, id, peerTxEnable)
-	go peers.Receiver(15647, peerUpdateCh)
+	go peers.Transmitter(15600, id, peerTxEnable) //15647
+	go peers.Receiver(15600, peerUpdateCh)
 
 	// We make channels for sending and receiving our custom data types
 	//helloTx := make(chan HelloMsg)
@@ -83,7 +84,7 @@ func main() {
 
 	inputPollRateMs := 25
 
-	elevio.Init("localhost:15657", nFloors)
+	elevio.Init("localhost:15657", nFloors) //endre denne for å bruke flere sockets for elevcd //15657
 
 	drv_buttons := make(chan elevio.ButtonEvent)
 	drv_floors := make(chan int)
@@ -109,7 +110,7 @@ func main() {
 		select {
 		case floor := <-drv_floors:
 			floorMsg := elevator.FloorArrivalMessageStruct{SystemID: "Gruppe10",
-				MessageID:    "Order",
+				MessageID:    "Floor",
 				ElevatorID:   elevator.MyID,
 				ArrivedFloor: floor}
 
@@ -133,7 +134,9 @@ func main() {
 			//Broadcaster fordelt ordre (med elevatorID)
 			//Hvis CAB-order: håndter internt (ikke broadcast)
 			//CAB-order deles ikke som en ordre, men som del av heis-tilstand/info
-			chosenElevator := manager.AssignOrderToElevator(database, button)
+			manager.SendOrderMessage(orderTx, button, database)
+
+			/*chosenElevator := manager.AssignOrderToElevator(database, button)
 
 			//Husk at vi skal fikse CAB som en egen greie
 			//pakk inn i melding og send
@@ -144,15 +147,16 @@ func main() {
 				ChosenElevator: chosenElevator}
 
 			orderTx <- orderMsg
+			*/
 
 			//elevator.Fsm_onRequestButtonPress(button.Floor, button.Button) //droppe denne
 
-		case timer := <-timer.C:
+		case timedOut := <-timer.C:
 			fmt.Println("fått lest fra timer.C")
 
-			fmt.Print(timer)
+			fmt.Print(timedOut)
 
-			elevator.Fsm_onDoorTimeout()
+			elevator.Fsm_onDoorTimeout(timer)
 
 		case obstruction := <-drv_obstr:
 			if elevator.IsDoorOpen() && obstruction {
@@ -179,8 +183,8 @@ func main() {
 
 			//HER LA VI TIL EN SJEKK OM CHOSEN ELEVTAOR ER I ETASJEN TIL BESTILLINGEN ALLEREDE, hvis den er det skal bestillingen cleares med en gang.
 			//burde sikkert være innbakt et annet sted.
-			if manager.WhatFloorIsElevator(database, orderBroadcast.ChosenElevator) == orderBroadcast.OrderedButton.Floor {
-				fmt.Printf("INNNE I WHATFLOOR IS ELEV!!!----------------------------------------------")
+			if manager.WhatFloorIsElevatorFromStringID(database, orderBroadcast.ChosenElevator) == orderBroadcast.OrderedButton.Floor &&
+				manager.WhatStateIsElevatorFromStringID(database, orderBroadcast.ChosenElevator) != elevator.EB_Moving {
 				elevator.Requests_clearOnFloor(orderBroadcast.ChosenElevator, orderBroadcast.OrderedButton.Floor)
 			}
 
@@ -201,6 +205,20 @@ func main() {
 			fmt.Printf("  Peers:    %q\n", p.Peers)
 			fmt.Printf("  New:      %q\n", p.New)
 			fmt.Printf("  Lost:     %q\n", p.Lost)
+
+			manager.UpdateElevatorNetworkStateInDatabase(p, database)
+
+			//legg dette inn i updatenetwork state
+			if len(p.Lost) != 0 {
+				for i := 0; i < len(p.Lost); i++ {
+					manager.ReassignDeadOrders(database, p.Lost[i])
+				}
+			}
+
+			//if p.New != ""
+
+			//for i := 0; i < len(p.New); i++ {
+			// 	reload orders
 
 		}
 
