@@ -34,7 +34,7 @@ func AssignOrderToElevator(database ElevatorDatabase, order elevio.ButtonEvent) 
 	return elevatorID
 }
 
-func ReassignDeadOrders(orderTx chan elevator.OrderMessageStruct, database ElevatorDatabase, deadElevatorID string) {
+func ReassignDeadOrders(msgTx chan MessageStruct, database ElevatorDatabase, deadElevatorID string) {
 	deadElev := GetElevatorFromID(database, deadElevatorID)
 	fmt.Println(" -----dead elevator id -----")
 	fmt.Println(deadElev.ElevatorID)
@@ -44,17 +44,17 @@ func ReassignDeadOrders(orderTx chan elevator.OrderMessageStruct, database Eleva
 			var order elevio.ButtonEvent
 			order.Button = elevio.ButtonType(button)
 			order.Floor = floor
-			fmt.Println(deadElev.Requests[floor][button])
+			//fmt.Println(deadElev.Requests[floor][button])
 
 			if deadElev.Requests[floor][button].ElevatorID == deadElevatorID {
 				fmt.Println("--------------FOUND DEADORDER--------------------------")
-				SendOrderMessage(orderTx, order, database)
+				ReassignSendOrderMessage(msgTx, order, database)
 			}
 		}
 
 	}
 	fmt.Println("-----------------REASSIGNED-----------------")
-	elevator.ElevatorPrint(GetElevatorFromID(database, elevator.MyID))
+	//elevator.ElevatorPrint(GetElevatorFromID(database, elevator.MyID))
 }
 
 func IsElevatorInDatabase(elevatorID string, database ElevatorDatabase) bool {
@@ -66,15 +66,15 @@ func IsElevatorInDatabase(elevatorID string, database ElevatorDatabase) bool {
 	return false
 }
 
-func UpdateDatabase(aliveMsg elevator.IAmAliveMessageStruct, database ElevatorDatabase) {
+func UpdateDatabase(newUpdate MessageStruct, database ElevatorDatabase) {
 
-	if aliveMsg.Elevator.Operating != elevator.WS_NoMotor {
-		aliveMsg.Elevator.Operating = elevator.WS_Running //OBS! Nå håndterer vi running-state som connected
+	if newUpdate.MyElevator.Operating != elevator.WS_NoMotor {
+		newUpdate.MyElevator.Operating = elevator.WS_Running //OBS! Nå håndterer vi running-state som connected
 	}
 
 	for i := 0; i < database.NumElevators; i++ {
-		if database.ElevatorsInNetwork[i].ElevatorID == aliveMsg.ElevatorID {
-			database.ElevatorsInNetwork[i] = aliveMsg.Elevator
+		if database.ElevatorsInNetwork[i].ElevatorID == newUpdate.SenderID {
+			database.ElevatorsInNetwork[i] = newUpdate.MyElevator
 		}
 	}
 }
@@ -117,12 +117,11 @@ func GetElevatorFromID(database ElevatorDatabase, elevatorID string) elevator.El
 	return e
 }
 
-func SendOrderMessage(orderTx chan elevator.OrderMessageStruct, button elevio.ButtonEvent, database ElevatorDatabase) {
+func ReassignSendOrderMessage(orderTx chan MessageStruct, button elevio.ButtonEvent, database ElevatorDatabase) {
 	chosenElevator := AssignOrderToElevator(database, button)
 
-	orderMsg := elevator.OrderMessageStruct{SystemID: "Gruppe10",
-		MessageID:      "Order",
-		ElevatorID:     elevator.MyID,
+	orderMsg := MessageStruct{
+		SenderID:       elevator.MyID,
 		OrderedButton:  button,
 		ChosenElevator: chosenElevator}
 
