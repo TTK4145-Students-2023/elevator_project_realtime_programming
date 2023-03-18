@@ -7,7 +7,7 @@ import (
 
 type MessageStruct struct {
 	SenderID    string
-	MessageType int
+	MessageType string
 
 	OrderCounter   int
 	OrderedButton  elevio.ButtonEvent
@@ -24,7 +24,7 @@ type AckMessageStruct struct {
 func MakeFloorMessage(floor int) MessageStruct {
 	floorMsg := MessageStruct{
 		SenderID:       elevator.MyID,
-		MessageType:    17,
+		MessageType:    "FloorArrival",
 		OrderedButton:  elevio.ButtonEvent{Floor: 0, Button: 0},
 		ChosenElevator: "",
 		ArrivedFloor:   floor,
@@ -36,7 +36,7 @@ func MakeFloorMessage(floor int) MessageStruct {
 func MakeOrderMessage(chosenElevator string, button elevio.ButtonEvent) MessageStruct {
 	orderMsg := MessageStruct{
 		SenderID:       elevator.MyID,
-		MessageType:    69,
+		MessageType:    "Order",
 		OrderedButton:  button,
 		ChosenElevator: chosenElevator,
 		ArrivedFloor:   -1,
@@ -56,7 +56,7 @@ func MakeAckMessage() AckMessageStruct {
 func MakeNewElevator() MessageStruct{
 	newElevator := MessageStruct{
 		SenderID:       elevator.MyID,
-		MessageType:    666,
+		MessageType:    "NewElevatorOnNetwork",
 		OrderedButton:  elevio.ButtonEvent{Floor: 0, Button: 0},
 		ChosenElevator: "",
 		ArrivedFloor:   -1,

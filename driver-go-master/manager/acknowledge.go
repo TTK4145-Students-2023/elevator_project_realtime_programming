@@ -5,20 +5,21 @@ import (
 	"time"
 )
 
-func TimeAcknowledgementAndResend(chanTx chan MessageStruct,
-	broadcastMessage MessageStruct, ackRx chan AckMessageStruct, numOfElevatorsInNetwork int) {
+func TimeAcknowledgementAndResend(chanTx chan MessageStruct, broadcastMessage MessageStruct,
+	numOfElevatorsInNetwork int, receivedAckChan chan AckMessageStruct) {
 
 	resendCap := 20
 	numOfExpectedAcks := numOfElevatorsInNetwork
 
 	acknowledgementCount := 0
 	resendsCount := 0
-	timer := time.NewTimer(30 * time.Millisecond)
+	timer := time.NewTimer(50 * time.Millisecond)
 
 	select {
-	case <-ackRx:
+	case <-receivedAckChan:
 		//Hvis det er en ack som er til meg
 		acknowledgementCount++ //må man vite hvem som har sendt acks?
+		fmt.Println("TimeAndResendFunc has received ", acknowledgementCount, " acknowledgement on 'receivedAckChan'")
 		if acknowledgementCount == numOfExpectedAcks {
 			timer.Stop()
 			//break
@@ -32,15 +33,15 @@ func TimeAcknowledgementAndResend(chanTx chan MessageStruct,
 			//break
 			//HUSK! Vi har resenda mange ganger. Sannsynlighet og alt det der... Vi forventer en endring i peers.
 		}
-		timer.Reset(30 * time.Millisecond)
+		timer.Reset(50 * time.Millisecond)
 
 	}
 
 }
 
-func SendAcknowledge(ackTx chan AckMessageStruct, recievedMessage MessageStruct) {
+func SendAcknowledge(recievedMessage MessageStruct) AckMessageStruct {
 	ackMessage := AckMessageStruct{
 		IDOfAckReciever: recievedMessage.SenderID,
 		MessageNumber:   5} //recievedMessage.MyElevator.OrderCounter
-	ackTx <- ackMessage
+	return ackMessage
 }

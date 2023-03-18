@@ -66,7 +66,7 @@ func IsElevatorInDatabase(elevatorID string, database ElevatorDatabase) bool {
 	return false
 }
 
-func UpdateDatabase(newUpdate MessageStruct, database ElevatorDatabase) {
+func UpdateDatabase(newUpdate MessageStruct, database ElevatorDatabase) ElevatorDatabase {
 
 	if newUpdate.MyElevator.Operating != elevator.WS_NoMotor {
 		newUpdate.MyElevator.Operating = elevator.WS_Running //OBS! Nå håndterer vi running-state som connected
@@ -77,6 +77,7 @@ func UpdateDatabase(newUpdate MessageStruct, database ElevatorDatabase) {
 			database.ElevatorsInNetwork[i] = newUpdate.MyElevator
 		}
 	}
+	return database
 }
 
 func WhatFloorIsElevatorFromStringID(database ElevatorDatabase, elevatorID string) int {
