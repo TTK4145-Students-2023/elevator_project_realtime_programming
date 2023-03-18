@@ -2,6 +2,7 @@ package elevator
 
 import (
 	"Driver-go/elevio"
+	"fmt"
 )
 
 const NumFloors = 4
@@ -66,7 +67,6 @@ func DirnToString(direction elevio.MotorDirection) string {
 	}
 }
 
-/*
 func ElevatorPrint(es Elevator) {
 	fmt.Println("  +--------------------+")
 	fmt.Printf("  |ID = %-2d         |\n", es.ElevatorID)
@@ -91,10 +91,9 @@ func ElevatorPrint(es Elevator) {
 	}
 	fmt.Println("  +--------------------+")
 }
-*/
 
 func Elevator_uninitialized(myID string) Elevator {
-	elev := Elevator{Floor: -10}
+	elev := Elevator{Floor: 100}
 	elev.Behaviour = EB_Idle
 	elev.Dirn = elevio.MD_Stop
 	elev.ElevatorID = myID

@@ -5,14 +5,27 @@ import (
 	"Driver-go/elevio"
 )
 
-type MessageStruct struct {
+type FloorArrivalMessageStruct struct {
+	SenderID    string
+	MessageType int
+
+	OrderCounter int
+	ArrivedFloor int
+	MyElevator   elevator.Elevator
+}
+
+type SingleElevatorMessageStruct struct {
+	SenderID   string
+	MyElevator elevator.Elevator
+}
+
+type OrderMessageStruct struct {
 	SenderID    string
 	MessageType int
 
 	OrderCounter   int
 	OrderedButton  elevio.ButtonEvent
 	ChosenElevator string
-	ArrivedFloor   int
 	MyElevator     elevator.Elevator
 }
 
@@ -21,25 +34,22 @@ type AckMessageStruct struct {
 	MessageNumber   int
 }
 
-func MakeFloorMessage(floor int) MessageStruct {
-	floorMsg := MessageStruct{
-		SenderID:       elevator.MyID,
-		MessageType:    17,
-		OrderedButton:  elevio.ButtonEvent{Floor: 0, Button: 0},
-		ChosenElevator: "",
-		ArrivedFloor:   floor,
-		MyElevator:     elevator.GetSingleElevatorStruct()}
+func MakeFloorMessage(floor int) FloorArrivalMessageStruct {
+	floorMsg := FloorArrivalMessageStruct{
+		SenderID:     elevator.MyID,
+		MessageType:  17,
+		ArrivedFloor: floor,
+		MyElevator:   elevator.GetSingleElevatorStruct()}
 
 	return floorMsg
 }
 
-func MakeOrderMessage(chosenElevator string, button elevio.ButtonEvent) MessageStruct {
-	orderMsg := MessageStruct{
+func MakeOrderMessage(chosenElevator string, button elevio.ButtonEvent) OrderMessageStruct {
+	orderMsg := OrderMessageStruct{
 		SenderID:       elevator.MyID,
 		MessageType:    69,
 		OrderedButton:  button,
 		ChosenElevator: chosenElevator,
-		ArrivedFloor:   -1,
 		MyElevator:     elevator.GetSingleElevatorStruct()}
 
 	return orderMsg
@@ -53,14 +63,10 @@ func MakeAckMessage() AckMessageStruct {
 	return ackMsg
 }
 
-func MakeNewElevator() MessageStruct{
-	newElevator := MessageStruct{
-		SenderID:       elevator.MyID,
-		MessageType:    666,
-		OrderedButton:  elevio.ButtonEvent{Floor: 0, Button: 0},
-		ChosenElevator: "",
-		ArrivedFloor:   -1,
-		MyElevator:     elevator.GetSingleElevatorStruct()}
+func MakeNewElevator() SingleElevatorMessageStruct { //Brukte bare floorarival nå for å teste
+	newElevator := SingleElevatorMessageStruct{
+		SenderID:   elevator.MyID,
+		MyElevator: elevator.GetSingleElevatorStruct()}
 
 	return newElevator
 }

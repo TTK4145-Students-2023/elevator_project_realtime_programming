@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-const MyID = "14000"
+const MyID = "15657"
 
 var elevator = Elevator_uninitialized(MyID)
 
@@ -100,7 +100,7 @@ func Fsm_onFloorArrival(newFloor int, timer *time.Timer) {
 	}
 
 	fmt.Printf("\nNew state:\n")
-	//ElevatorPrint(elevator)
+	ElevatorPrint(elevator)
 }
 
 func Fsm_onDoorTimeout(timer *time.Timer) {
