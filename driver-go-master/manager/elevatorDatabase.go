@@ -23,10 +23,14 @@ func AssignOrderToElevator(database ElevatorDatabase, order elevio.ButtonEvent) 
 		elevatorID = elevator.MyID
 	} else {
 		for i := 0; i < database.NumElevators; i++ {
-			c := calculateCost(&connectedElevators[i], order)                          //OBS! Blanding av pekere og ikke pekere
-			if c < lowCost && connectedElevators[i].Operating == elevator.WS_Running { //Sjekker at calgt heis ikke er unconnected
-				lowCost = c
+			if connectedElevators[i].Floor == order.Floor && connectedElevators[i].Operating == elevator.WS_Running {
 				elevatorID = connectedElevators[i].ElevatorID
+			} else {
+				c := calculateCost(&connectedElevators[i], order)                          //OBS! Blanding av pekere og ikke pekere
+				if c < lowCost && connectedElevators[i].Operating == elevator.WS_Running { //Sjekker at calgt heis ikke er unconnected
+					lowCost = c
+					elevatorID = connectedElevators[i].ElevatorID
+				}
 			}
 		}
 	}
