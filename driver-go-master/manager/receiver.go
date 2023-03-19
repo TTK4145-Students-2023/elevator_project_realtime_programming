@@ -9,25 +9,26 @@ import (
 
 func ReceiveMessages(mainTimer time.Timer, database ElevatorDatabase, databaseChan chan ElevatorDatabase,
 	ackTx chan AckMessageStruct, orderRx chan OrderMessageStruct, floorArrivalRx chan FloorArrivalMessageStruct,
-	ackRx chan AckMessageStruct, newElevatorRx chan SingleElevatorMessageStruct, shouldAck chan AckMessageStruct) {
+	ackRx chan AckMessageStruct, newElevatorRx chan SingleElevatorMessageStruct) {
+
+	acknowledgementCount := 0
 
 	for {
 		select {
 		case floorArrivalBroadcast := <-floorArrivalRx:
-			
-			shouldAck <- SendAcknowledge(floorArrivalBroadcast.SenderID)
+			fmt.Println("I have received a floor arrival!")
+			ackTx <- SendAcknowledge(floorArrivalBroadcast.SenderID)
 			databaseChan <- UpdateDatabase(floorArrivalBroadcast.MyElevator, database, floorArrivalBroadcast.SenderID)
 
-			if floorArrivalBroadcast.SenderID == elevator.MyID {
-				elevator.Fsm_onFloorArrival(floorArrivalBroadcast.ArrivedFloor, &mainTimer)
-			} else {
+			if floorArrivalBroadcast.SenderID != elevator.MyID {
 				elevator.Requests_clearOnFloor(floorArrivalBroadcast.SenderID, floorArrivalBroadcast.ArrivedFloor)
 			}
 
 		case orderBroadcast := <-orderRx:
 			fmt.Println("I have received an order!")
-			shouldAck <- SendAcknowledge(orderBroadcast.SenderID)
-			databaseChan <- UpdateDatabase(orderBroadcast.MyElevator, database, orderBroadcast.SenderID)
+			ackTx <- SendAcknowledge(orderBroadcast.SenderID)
+			updatedDatabase := UpdateDatabase(orderBroadcast.MyElevator, database, orderBroadcast.SenderID)
+			databaseChan <- updatedDatabase
 
 			if orderBroadcast.OrderedButton.Button != elevio.BT_Cab {
 				elevator.Elevator_increaseOrderNumber()
@@ -41,12 +42,13 @@ func ReceiveMessages(mainTimer time.Timer, database ElevatorDatabase, databaseCh
 
 			//HER LA VI TIL EN SJEKK OM CHOSEN ELEVTAOR ER I ETASJEN TIL BESTILLINGEN ALLEREDE, hvis den er det skal bestillingen cleares med en gang.
 			//burde sikkert være innbakt et annet sted.
-			if WhatFloorIsElevatorFromStringID(database, orderBroadcast.ChosenElevator) == orderBroadcast.OrderedButton.Floor &&
-				WhatStateIsElevatorFromStringID(database, orderBroadcast.ChosenElevator) != elevator.EB_Moving {
+			if WhatFloorIsElevatorFromStringID(updatedDatabase, orderBroadcast.ChosenElevator) == orderBroadcast.OrderedButton.Floor &&
+				WhatStateIsElevatorFromStringID(updatedDatabase, orderBroadcast.ChosenElevator) != elevator.EB_Moving {
 				elevator.Requests_clearOnFloor(orderBroadcast.ChosenElevator, orderBroadcast.OrderedButton.Floor)
 			}
 
 		case newElevatorBroadcast := <-newElevatorRx:
+			ackTx <- SendAcknowledge(newElevatorBroadcast.SenderID)
 			if !IsElevatorInDatabase(newElevatorBroadcast.SenderID, database) {
 				database.ElevatorsInNetwork = append(database.ElevatorsInNetwork, newElevatorBroadcast.MyElevator)
 				database.NumElevators++
@@ -56,7 +58,19 @@ func ReceiveMessages(mainTimer time.Timer, database ElevatorDatabase, databaseCh
 			} else {
 				databaseChan <- UpdateDatabase(newElevatorBroadcast.MyElevator, database, newElevatorBroadcast.SenderID)
 			}
+		case ack := <-ackRx:
+			//Hvis det er en ack som er til meg
+			if ack.IDOfAckReciever == elevator.MyID {
+				acknowledgementCount++ //må man vite hvem som har sendt acks?
+				fmt.Println("Order_Number of acknowledgements: ", acknowledgementCount)
+				if acknowledgementCount == 2 { //numOfExpectedAcks
+					fmt.Println("I have received all acks")
+					acknowledgementCount = 0
+					//timer.Stop()
+					//break
+				}
+			}
 		}
-		time.Sleep(time.Duration(25) * time.Millisecond)
+		time.Sleep(time.Duration(20) * time.Millisecond)
 	}
 }

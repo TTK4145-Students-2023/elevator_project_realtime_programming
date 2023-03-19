@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-const MyID = "15657"
+const MyID = "14000"
 
 var elevator = Elevator_uninitialized(MyID)
 
@@ -70,7 +70,7 @@ func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType, chosenEle
 	SetAllLights(elevator)
 
 	fmt.Printf("\nNew state:\n")
-	//ElevatorPrint(elevator)
+	ElevatorPrint(elevator)
 }
 
 func Fsm_onFloorArrival(newFloor int, timer *time.Timer) {
@@ -99,8 +99,8 @@ func Fsm_onFloorArrival(newFloor int, timer *time.Timer) {
 	default:
 	}
 
-	fmt.Printf("\nNew state:\n")
-	ElevatorPrint(elevator)
+	//fmt.Printf("\nNew state:\n")
+	//ElevatorPrint(elevator)
 }
 
 func Fsm_onDoorTimeout(timer *time.Timer) {

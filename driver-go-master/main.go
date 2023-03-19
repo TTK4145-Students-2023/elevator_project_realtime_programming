@@ -43,7 +43,7 @@ func main() {
 	// We can disable/enable the transmitter after it has been started.
 	// This could be used to signal that we are somehow "unavailable".
 	peerTxEnable := make(chan bool)
-	go peers.Transmitter(15600, id, peerTxEnable) //15647
+	go peers.Transmitter(15600, id, peerTxEnable) //15657
 	go peers.Receiver(15600, peerUpdateCh)
 
 	orderTx := make(chan manager.OrderMessageStruct)
@@ -85,15 +85,15 @@ func main() {
 	drv_stop := make(chan bool)
 
 	databaseChannel := make(chan manager.ElevatorDatabase)
-	initiateResend := make(chan manager.OrderMessageStruct)
-	shouldAcknowledge := make(chan manager.AckMessageStruct)
 
 	go elevio.PollButtons(drv_buttons)
 	go elevio.PollFloorSensor(drv_floors)
 	go elevio.PollObstructionSwitch(drv_obstr)
 	go elevio.PollStopButton(drv_stop)
 
-	go manager.ReceiveMessages(*mainTimer, mainDatabase, databaseChannel, ackTx, orderRx, floorArrivalRx, ackRx, newElevatorRx, shouldAcknowledge)
+	newElevatorTx <- manager.MakeNewElevator()
+
+	go manager.ReceiveMessages(*mainTimer, mainDatabase, databaseChannel, ackTx, orderRx, floorArrivalRx, ackRx, newElevatorRx)
 
 	if elevio.GetFloor() == -1 {
 		elevator.Fsm_onInitBetweenFloors()
@@ -103,6 +103,7 @@ func main() {
 
 		select {
 		case floor := <-drv_floors:
+			elevator.Fsm_onFloorArrival(floor, mainTimer)
 			floorMessage := manager.MakeFloorMessage(floor)
 			/*if !manager.IsElevatorInDatabase(floorMessage.SenderID, mainDatabase) {
 				floorMessage.MyElevator.Floor = floor
@@ -112,17 +113,17 @@ func main() {
 			}*/
 			floorArrivalTx <- floorMessage //ackRx) //Ta inn ack kanalen og håndtere den inn i funksjonen?
 			fmt.Println("sent floor message")
-			manager.FloorArrivalBroadcast_timeAcknowledgementAndResend(floorArrivalTx, floorMessage, ackRx, mainDatabase.NumElevators)
+			//manager.FloorArrivalBroadcast_timeAcknowledgementAndResend(floorArrivalTx, floorMessage, ackRx, mainDatabase.NumElevators)
 
 		case button := <-drv_buttons:
 			chosenElevator := manager.AssignOrderToElevator(mainDatabase, button)
 			orderMessage := manager.MakeOrderMessage(chosenElevator, button)
+			fmt.Println("The order was from floor: ", orderMessage.OrderedButton.Floor, "\nAnd the order was assigned to: ", orderMessage.ChosenElevator)
 
 			orderTx <- orderMessage
 			fmt.Println("sent button message!")
-			fmt.Println("The order was from floor: ", orderMessage.OrderedButton.Floor, "\nAnd the order was assigned to: ", orderMessage.ChosenElevator)
 
-			manager.OrderBroadcast_timeAcknowledgementAndResend(initiateResend, orderMessage, ackRx, mainDatabase.NumElevators)
+			//manager.OrderBroadcast_timeAcknowledgementAndResend(orderTx, orderMessage, ackRx, mainDatabase.NumElevators)
 
 			//elevator.Fsm_onRequestButtonPress(button.Floor, button.Button) //droppe denne
 
@@ -160,7 +161,6 @@ func main() {
 
 			if p.New != "" {
 				newElevatorTx <- manager.MakeNewElevator()
-
 			}
 
 			//for i := 0; i < len(p.New); i++ {
@@ -168,11 +168,6 @@ func main() {
 
 		case updatedDatabase := <-databaseChannel:
 			mainDatabase = updatedDatabase
-
-		case shouldResend := <-initiateResend:
-			orderTx <- shouldResend
-		case ack := <-shouldAcknowledge:
-			ackTx <- ack
 		}
 
 		time.Sleep(time.Duration(inputPollRateMs) * time.Millisecond)
