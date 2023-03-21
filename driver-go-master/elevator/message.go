@@ -11,9 +11,9 @@ type OrderMessageStruct struct {
 	ElevatorID string
 
 	//orderCounter int
-	OrderedButton elevio.ButtonEvent
+	OrderedButton  elevio.ButtonEvent
 	ChosenElevator string
-	MyElevator Elevator
+	MyElevator     Elevator
 }
 
 type FloorArrivalMessageStruct struct {
@@ -23,8 +23,7 @@ type FloorArrivalMessageStruct struct {
 
 	//orderCounter int
 	ArrivedFloor int
-	MyElevator Elevator
-
+	MyElevator   Elevator
 }
 
 type IAmAliveMessageStruct struct {
@@ -37,21 +36,21 @@ type IAmAliveMessageStruct struct {
 
 func MakeFloorMessage(floor int) FloorArrivalMessageStruct {
 	floorMsg := FloorArrivalMessageStruct{SystemID: "Gruppe10",
-	MessageID:    "Floor",
-	ElevatorID:   MyID,
-	ArrivedFloor: floor,
-	MyElevator: elevator}
+		MessageID:    "Floor",
+		ElevatorID:   MyID,
+		ArrivedFloor: floor,
+		MyElevator:   elevator}
 
 	return floorMsg
 }
 
-func MakeOrderMessage(chosenElevator string, button elevio.ButtonEvent) OrderMessageStruct{
+func MakeOrderMessage(chosenElevator string, button elevio.ButtonEvent) OrderMessageStruct {
 	orderMsg := OrderMessageStruct{SystemID: "Gruppe10",
 		MessageID:      "Order",
 		ElevatorID:     MyID,
 		OrderedButton:  button,
 		ChosenElevator: chosenElevator,
-		MyElevator: elevator}
+		MyElevator:     elevator}
 
 	return orderMsg
 }
@@ -68,5 +67,3 @@ func SendIAmAlive(aliveTx chan IAmAliveMessageStruct) {
 		time.Sleep(100 * time.Millisecond)
 	}
 }
-
-func WaitForAck()
