@@ -62,13 +62,9 @@ func SendIAmAlive(aliveTx chan IAmAliveMessageStruct) {
 		ElevatorID: MyID,
 		Elevator:   elevator}
 	for {
-		if elevator.SingleElevator {
-			time.Sleep(200 * time.Millisecond)
-			aliveMsg.Elevator = elevator
-			aliveTx <- aliveMsg
-		}
+		time.Sleep(250 * time.Millisecond)
 		aliveMsg.Elevator = elevator //oppdaterer heismelding
 		aliveTx <- aliveMsg
-		time.Sleep(100 * time.Millisecond)
+
 	}
 }

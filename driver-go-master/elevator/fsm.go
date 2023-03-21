@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-const MyID = "15000"
+const MyID = "15657"
 
 var elevator = Elevator_uninitialized(MyID)
 
@@ -32,7 +32,7 @@ func Fsm_onInitBetweenFloors() {
 	elevator.Behaviour = EB_Moving
 }
 
-func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType, chosenElevator string, timer *time.Timer) {
+func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType, chosenElevator string, doorTimer *time.Timer, immobilityTimer *time.Timer) {
 	//fmt.Printf("\n\n%s(%d, %s)\n", "fsm_onRequestButtonPress", btnFloor, btnType.ToString())
 	ElevatorPrint(elevator)
 	//fmt.Println(calculateCost(&elevator, btnFloor))
@@ -41,13 +41,15 @@ func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType, chosenEle
 	switch elevator.Behaviour {
 	case EB_DoorOpen:
 		if Requests_shouldClearImmediately(elevator, btnFloor, btnType) {
-			timer.Reset(3 * time.Second)
+			doorTimer.Reset(3 * time.Second)
 			fmt.Println("Her kan vi kjøre clearOnFloor()")
 		} else {
 			elevator.Requests[btnFloor][btnType].order = true
 			elevator.Requests[btnFloor][btnType].ElevatorID = chosenElevator
 		}
 	case EB_Moving:
+		immobilityTimer.Reset(3 * time.Second)
+		fmt.Println("Nå har jeg resetet immobilityTimer i Fsm_Req, case EB_Moving_1")
 		elevator.Requests[btnFloor][btnType].order = true
 		elevator.Requests[btnFloor][btnType].ElevatorID = chosenElevator
 	case EB_Idle:
@@ -59,9 +61,11 @@ func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType, chosenEle
 		switch pair.behaviour {
 		case EB_DoorOpen:
 			elevio.SetDoorOpenLamp(true)
-			timer.Reset(3 * time.Second)
+			doorTimer.Reset(3 * time.Second)
 			elevator = Requests_clearAtCurrentFloor(elevator)
 		case EB_Moving:
+			immobilityTimer.Reset(3 * time.Second)
+			fmt.Println("Nå har jeg resetet immobilityTimer i Fsm_Req, case EB_Moving_2")
 			elevio.SetMotorDirection(elevator.Dirn)
 		case EB_Idle:
 		}
@@ -74,20 +78,24 @@ func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType, chosenEle
 	ElevatorPrint(elevator)
 }
 
-func Fsm_onFloorArrival(newFloor int, timer *time.Timer) {
+func Fsm_onFloorArrival(newFloor int, doorTimer *time.Timer, immobilityTimer *time.Timer) {
 	fmt.Printf("\n\n%s(%d)\n", "fsm_onFloorArrival", newFloor)
 	ElevatorPrint(elevator)
 
 	elevator.Floor = newFloor
 	elevio.SetFloorIndicator(newFloor)
-
+	SetWorkingState(WS_Connected)
 	switch elevator.Behaviour {
 	case EB_Moving:
+		immobilityTimer.Reset(3 * time.Second)
+		fmt.Println("Nå har jeg resetet immobilityTimer i Fsm_FloorA, case EB_Moving")
 		if Requests_shouldStop(elevator) {
+			immobilityTimer.Stop()
+			fmt.Println("Stoppet immobilityTimer i fsm_floorA")
 			elevio.SetMotorDirection(elevio.MD_Stop)
 			elevio.SetDoorOpenLamp(true)
 			if !elevio.GetObstruction() {
-				timer.Reset(3 * time.Second)
+				doorTimer.Reset(3 * time.Second)
 			}
 			elevator = Requests_clearAtCurrentFloor(elevator)
 			SetAllLights(elevator)

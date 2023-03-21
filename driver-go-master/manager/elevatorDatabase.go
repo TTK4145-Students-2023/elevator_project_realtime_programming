@@ -3,7 +3,7 @@ package manager
 import (
 	"Driver-go/elevator"
 	"Driver-go/elevio"
-	"Driver-go/network/peers"
+	
 	"fmt"
 )
 
@@ -21,7 +21,7 @@ func AssignOrderToElevator(database ElevatorDatabase, order elevio.ButtonEvent) 
 	fmt.Println("The connected elevators are: ", len(connectedElevators))
 	fmt.Println("And the number of connected elevators is: ", database.NumElevators)
 
-	if order.Button == elevio.BT_Cab {
+	if order.Button == elevio.BT_Cab || elevator.GetIAmAlone() {
 		elevatorID = elevator.MyID
 	} else {
 		for i := 0; i < database.NumElevators; i++ {
@@ -71,7 +71,7 @@ func IsElevatorInDatabase(elevatorID string, database ElevatorDatabase) bool {
 
 func UpdateDatabase(aliveMsg elevator.IAmAliveMessageStruct, database ElevatorDatabase) {
 
-	if aliveMsg.Elevator.Operating != elevator.WS_NoMotor {
+	if aliveMsg.Elevator.Operating != elevator.WS_Immobile {
 		aliveMsg.Elevator.Operating = elevator.WS_Connected //OBS! Nå håndterer vi running-state som connected
 	}
 
@@ -101,10 +101,10 @@ func WhatStateIsElevatorFromStringID(database ElevatorDatabase, elevatorID strin
 	return elevator.EB_Undefined
 }
 
-func UpdateElevatorNetworkStateInDatabase(peerUpdate peers.PeerUpdate, database ElevatorDatabase) {
+func UpdateElevatorNetworkStateInDatabase(elevatorID string, database ElevatorDatabase, newState elevator.WorkingState) {
 	for i := 0; i < len(database.ElevatorsInNetwork); i++ {
-		if !peers.IsPeerOnNetwork(database.ElevatorsInNetwork[i], peerUpdate) {
-			database.ElevatorsInNetwork[i].Operating = elevator.WS_Unconnected
+		if elevatorID == database.ElevatorsInNetwork[i].ElevatorID {
+			database.ElevatorsInNetwork[i].Operating = newState
 		}
 
 	}

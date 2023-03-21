@@ -71,8 +71,11 @@ func main() {
 		NumElevators: 0,
 	}
 
-	timer := time.NewTimer(3 * time.Second)
-	timer.Stop()
+	doorTimer := time.NewTimer(3 * time.Second)
+	doorTimer.Stop()
+
+	immobilityTimer := time.NewTimer(3 * time.Second)
+	immobilityTimer.Stop()
 
 	inputPollRateMs := 25
 
@@ -101,14 +104,16 @@ func main() {
 
 		select {
 		case floor := <-drv_floors:
+			//immobilityTimer.Stop()
+			//fmt.Println("Stoppet immobility timer on floorArrival")
+			//elevator.SetWorkingState(elevator.WS_Connected)
+			elevator.Fsm_onFloorArrival(floor, doorTimer, immobilityTimer)
 			floorArrivalTx <- elevator.MakeFloorMessage(floor) //ackRx) //Ta inn ack kanalen og håndtere den inn i funksjonen?
 
 			//SendFloorArrival(floorMsg,floorArrivalTx)
 
 		case floorArrivalBroadcast := <-floorArrivalRx:
-			if floorArrivalBroadcast.ElevatorID == elevator.MyID {
-				elevator.Fsm_onFloorArrival(floorArrivalBroadcast.ArrivedFloor, timer)
-			} else {
+			if floorArrivalBroadcast.ElevatorID != elevator.MyID {
 				elevator.Requests_clearOnFloor(floorArrivalBroadcast.ElevatorID, floorArrivalBroadcast.ArrivedFloor)
 			}
 		//case: mottatt melding om at kommet til floor
@@ -143,21 +148,30 @@ func main() {
 
 		case obstruction := <-drv_obstr:
 			if elevator.IsDoorOpen() && obstruction {
-				timer.Stop()
+				doorTimer.Stop()
+				immobilityTimer.Reset(3 * time.Second)
+				fmt.Println("Nå har jeg resetet immobilityTimer i obstruction")
 			} else if !obstruction && elevator.IsDoorOpen() {
-				timer.Reset(3 * time.Second)
+				immobilityTimer.Stop()
+				fmt.Println("Stoppet immobilityTimer i obstruction")
+				elevator.SetWorkingState(elevator.WS_Connected)
+				doorTimer.Reset(3 * time.Second)
 			}
 
-		case timedOut := <-timer.C:
-			fmt.Println("fått lest fra timer.C")
+		case <-doorTimer.C:
 
-			fmt.Print(timedOut)
-
-			elevator.Fsm_onDoorTimeout(timer)
+			elevator.Fsm_onDoorTimeout(doorTimer)
 
 			//if obstruction {
 			//	elevio.SetMotorDirection(elevio.MD_Stop)
 			//}
+
+		case <-immobilityTimer.C:
+			//skal redestribute ordre
+			elevator.SetWorkingState(elevator.WS_Immobile)
+			manager.UpdateElevatorNetworkStateInDatabase(elevator.MyID, database, elevator.WS_Immobile)
+			manager.ReassignDeadOrders(orderTx, database, elevator.MyID)
+			fmt.Println("Iam immobile", elevator.MyID)
 
 		case orderBroadcast := <-orderRx:
 
@@ -169,7 +183,7 @@ func main() {
 			//if chosenElev already on floor -> Request_clearOnFloor
 			if (orderBroadcast.OrderedButton.Button == elevio.BT_Cab && orderBroadcast.ChosenElevator == elevator.MyID) ||
 				orderBroadcast.OrderedButton.Button != elevio.BT_Cab {
-				elevator.Fsm_onRequestButtonPress(orderBroadcast.OrderedButton.Floor, orderBroadcast.OrderedButton.Button, orderBroadcast.ChosenElevator, timer)
+				elevator.Fsm_onRequestButtonPress(orderBroadcast.OrderedButton.Floor, orderBroadcast.OrderedButton.Button, orderBroadcast.ChosenElevator, doorTimer, immobilityTimer)
 			}
 
 			//HER LA VI TIL EN SJEKK OM CHOSEN ELEVTAOR ER I ETASJEN TIL BESTILLINGEN ALLEREDE, hvis den er det skal bestillingen cleares med en gang.
@@ -187,10 +201,8 @@ func main() {
 			/*if !manager.IsElevatorInDatabase(aliveMsg.ElevatorID, database) {
 				database.ElevatorsInNetwork = append(database.ElevatorsInNetwork, aliveMsg.Elevator)
 			}*/
-			
-			
+
 			manager.UpdateDatabase(aliveMsg, database)
-			
 
 		case p := <-peerUpdateCh:
 			fmt.Printf("Peer update:\n")
@@ -198,11 +210,10 @@ func main() {
 			fmt.Printf("  New:      %q\n", p.New)
 			fmt.Printf("  Lost:     %q\n", p.Lost)
 
-			manager.UpdateElevatorNetworkStateInDatabase(p, database)
-
 			//legg dette inn i updatenetwork state
 			if len(p.Lost) != 0 {
 				for i := 0; i < len(p.Lost); i++ {
+					manager.UpdateElevatorNetworkStateInDatabase(p.Lost[i], database, elevator.WS_Unconnected)
 					fmt.Println("Lost elevator requests: ", manager.GetElevatorFromID(database, p.Lost[i]).Requests)
 					fmt.Println("This is the database: ")
 					for i := 0; i < len(database.ElevatorsInNetwork); i++ {
@@ -213,6 +224,7 @@ func main() {
 				}
 				if database.NumElevators <= 1 {
 					elevator.SetIAmAlone(true)
+					fmt.Println("I am alone", elevator.GetIAmAlone())
 				}
 			}
 

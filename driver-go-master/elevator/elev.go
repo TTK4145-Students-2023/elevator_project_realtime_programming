@@ -22,7 +22,7 @@ type WorkingState int
 const (
 	WS_Connected = iota
 	WS_Unconnected
-	WS_NoMotor
+	WS_Immobile
 )
 
 type OrderpanelPair struct {
@@ -126,4 +126,8 @@ func GetIAmAlone() bool {
 }
 func SetIAmAlone(alone bool) {
 	elevator.SingleElevator = alone
+}
+
+func SetWorkingState(state WorkingState) {
+	elevator.Operating = state
 }
