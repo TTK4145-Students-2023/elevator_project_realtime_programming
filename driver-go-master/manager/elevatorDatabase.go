@@ -18,19 +18,22 @@ func AssignOrderToElevator(database ElevatorDatabase, order elevio.ButtonEvent) 
 	elevatorID := ""
 
 	connectedElevators := database.ElevatorsInNetwork
+	fmt.Println("The connected elevators are: ", len(connectedElevators))
+	fmt.Println("And the number of connected elevators is: ", database.NumElevators)
 
 	if order.Button == elevio.BT_Cab {
 		elevatorID = elevator.MyID
 	} else {
 		for i := 0; i < database.NumElevators; i++ {
-			c := calculateCost(&connectedElevators[i], order)                          //OBS! Blanding av pekere og ikke pekere
-			if c < lowCost && connectedElevators[i].Operating == elevator.WS_Running { //Sjekker at calgt heis ikke er unconnected
+			c := calculateCost(&connectedElevators[i], order)                            //OBS! Blanding av pekere og ikke pekere
+			if c < lowCost && connectedElevators[i].Operating == elevator.WS_Connected { //Sjekker at calgt heis ikke er unconnected
 				lowCost = c
 				elevatorID = connectedElevators[i].ElevatorID
 			}
 		}
 	}
 
+	fmt.Println("Assigned order to: ", elevatorID)
 	return elevatorID
 }
 
@@ -40,7 +43,7 @@ func ReassignDeadOrders(orderTx chan elevator.OrderMessageStruct, database Eleva
 	fmt.Println(deadElev.ElevatorID)
 	fmt.Println(("here are the orders"))
 	for floor := 0; floor < elevator.NumFloors; floor++ {
-		for button := 0; button < elevator.NumButtons; button++ {
+		for button := elevio.BT_HallUp; button < elevio.BT_Cab; button++ {
 			var order elevio.ButtonEvent
 			order.Button = elevio.ButtonType(button)
 			order.Floor = floor
@@ -69,7 +72,7 @@ func IsElevatorInDatabase(elevatorID string, database ElevatorDatabase) bool {
 func UpdateDatabase(aliveMsg elevator.IAmAliveMessageStruct, database ElevatorDatabase) {
 
 	if aliveMsg.Elevator.Operating != elevator.WS_NoMotor {
-		aliveMsg.Elevator.Operating = elevator.WS_Running //OBS! Nå håndterer vi running-state som connected
+		aliveMsg.Elevator.Operating = elevator.WS_Connected //OBS! Nå håndterer vi running-state som connected
 	}
 
 	for i := 0; i < database.NumElevators; i++ {
@@ -127,4 +130,21 @@ func SendOrderMessage(orderTx chan elevator.OrderMessageStruct, button elevio.Bu
 		ChosenElevator: chosenElevator}
 
 	orderTx <- orderMsg
+}
+
+func SendCabCallsForElevator(orderTx chan elevator.OrderMessageStruct, database ElevatorDatabase, newPeer string) {
+	for i := 0; i < len(database.ElevatorsInNetwork); i++ {
+		if database.ElevatorsInNetwork[i].ElevatorID == newPeer {
+			fmt.Println("her har den matchende id som den som kom tilbake")
+			for floor := 0; floor < elevator.NumFloors; floor++ {
+				if database.ElevatorsInNetwork[i].Requests[floor][elevio.BT_Cab].ElevatorID == newPeer {
+					var button elevio.ButtonEvent
+					button.Floor = floor
+					button.Button = elevio.BT_Cab
+					fmt.Println("Cab call to be sent: ", button)
+					orderTx <- elevator.MakeOrderMessage(newPeer, button)
+				}
+			}
+		}
+	}
 }

@@ -105,43 +105,6 @@ func main() {
 
 			//SendFloorArrival(floorMsg,floorArrivalTx)
 
-			//---------------15.03-----------------
-			/*
-				DETTE SKAL SKJE VED HVER HARDWARE EVENT: FLOORSENSOR, BUTTONS, OBSTRUCTION
-				1. sende standardisert melding med "fysisk" heis (struct), avsenderID, meldingsID og info for gjeldende event
-				2. starte venting på acks som har din egen ID (sette en readDeadline ellerno)
-
-				Om å løse samme problem to ganger: Om vi resender ti ganger og fortsatt ikke har mottatt acks fra begge heiser,
-				så BØR det ha skjedd noe i peers. Sannsyligheten for samme packet loss ti ganger, er veldig liten.
-
-				JEG HAR MOTTATT MELDING
-				1. Send acknowledge med avsenderIDen som er med i den mottatte meldingen (Inkludere meldingscounter)
-				2. Switch case på meldingsID:
-					2a. meldingsID: FLOORSENSOR -> Fsm_onFloorArrival() (OBS! Logikk vi har)
-					2b. osv.....
-
-				ACKNOWLEDGEMENTKANAL
-				1. Mottatt ack. -> ack-count++
-				2. Hvis to tre acks, så er alt good
-				3. Hvis timer har gått ut og mottatt under tre acks, resend
-
-				MESSAGECOUNTERS
-				- Hver heis inkrementerer srivalTin messagesSent når de sender en melding. Denne counten er inkludert i meldingen som sendes.
-				- Hver individuelle count lagres til tilhørende heis i databasen og sjekkes opp imot den mottatte meldingscounten.
-				- Ikke ack om du mottar en meldingscount som er >1 over din lagrede info:
-					- Vent på resending av alle manglende meldinger
-
-
-					------- Litt søppel -------ø
-					2a. ikke mottatt ack: resend (x5 feks vet ikke helt) (OBS! Duplicate messages!! Counters?)
-					2b. mottatt ack -> bra
-				3. har ikke mottatt noen acks etter x antall resends -> jeg er alene og død
-					(OBS! Løser dette samme problem to ganger ettersom at vi har peers?)
-				4. Kun mottatt ack fra 1 heis (selv etter flere resends) -> Den andre heisen er død
-					4a. Initiere en sjekk som gjør at begge heiser erklærer den død?? (PEERS???)
-
-			*/
-
 		case floorArrivalBroadcast := <-floorArrivalRx:
 			if floorArrivalBroadcast.ElevatorID == elevator.MyID {
 				elevator.Fsm_onFloorArrival(floorArrivalBroadcast.ArrivedFloor, timer)
@@ -198,7 +161,7 @@ func main() {
 
 		case orderBroadcast := <-orderRx:
 
-			fmt.Printf("Received: %#v\n", orderBroadcast)
+			//fmt.Printf("Received: %#v\n", orderBroadcast)
 			if orderBroadcast.OrderedButton.Button != elevio.BT_Cab {
 				elevator.Elevator_increaseOrderNumber()
 			}
@@ -221,12 +184,13 @@ func main() {
 		case aliveMsg := <-aliveRx:
 			//oppdater tilhørende heis i databasestruct (dette er for å regne cost)
 
-			if !manager.IsElevatorInDatabase(aliveMsg.ElevatorID, database) {
+			/*if !manager.IsElevatorInDatabase(aliveMsg.ElevatorID, database) {
 				database.ElevatorsInNetwork = append(database.ElevatorsInNetwork, aliveMsg.Elevator)
-				database.NumElevators++
-			}
-
+			}*/
+			
+			
 			manager.UpdateDatabase(aliveMsg, database)
+			
 
 		case p := <-peerUpdateCh:
 			fmt.Printf("Peer update:\n")
@@ -239,11 +203,40 @@ func main() {
 			//legg dette inn i updatenetwork state
 			if len(p.Lost) != 0 {
 				for i := 0; i < len(p.Lost); i++ {
+					fmt.Println("Lost elevator requests: ", manager.GetElevatorFromID(database, p.Lost[i]).Requests)
+					fmt.Println("This is the database: ")
+					for i := 0; i < len(database.ElevatorsInNetwork); i++ {
+						elevator.ElevatorPrint(database.ElevatorsInNetwork[i])
+					}
 					manager.ReassignDeadOrders(orderTx, database, p.Lost[i])
+					database.NumElevators--
+				}
+				if database.NumElevators <= 1 {
+					elevator.SetIAmAlone(true)
 				}
 			}
 
-			//if p.New != ""
+			if p.New != "" {
+				if !manager.IsElevatorInDatabase(p.New, database) {
+					database.ElevatorsInNetwork = append(database.ElevatorsInNetwork, elevator.Elevator{ElevatorID: p.New, Operating: elevator.WS_Connected})
+				}
+
+				for i := 0; i < len(database.ElevatorsInNetwork); i++ {
+					if database.ElevatorsInNetwork[i].ElevatorID == p.New {
+						database.ElevatorsInNetwork[i].Operating = elevator.WS_Connected
+					}
+				}
+
+				if !elevator.GetIAmAlone() {
+					fmt.Println("Ready to send CABs")
+					manager.SendCabCallsForElevator(orderTx, database, p.New)
+				}
+
+				database.NumElevators++
+				if database.NumElevators > 1 {
+					elevator.SetIAmAlone(false)
+				}
+			}
 
 			//for i := 0; i < len(p.New); i++ {
 			// 	reload orders

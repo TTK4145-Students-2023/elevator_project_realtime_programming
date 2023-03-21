@@ -20,7 +20,7 @@ const (
 type WorkingState int
 
 const (
-	WS_Running = iota
+	WS_Connected = iota
 	WS_Unconnected
 	WS_NoMotor
 )
@@ -38,6 +38,7 @@ type Elevator struct {
 	Behaviour   ElevatorBehaviour
 	DoorOpen    bool
 	Operating   WorkingState
+	SingleElevator bool
 	OrderNumber int
 }
 
@@ -74,7 +75,7 @@ func ElevatorPrint(es Elevator) {
 	fmt.Printf("  |dirn  = %-12.12s|\n", DirnToString(es.Dirn))
 	fmt.Printf("  |behav = %-12.12s|\n", ebToString(es.Behaviour))
 	fmt.Printf("  |door = %-2d          |\n", es.DoorOpen)
-	fmt.Printf("  |operating =         |\n", es.Operating)
+	fmt.Printf("  |operating = %-2d        |\n", es.Operating)
 	fmt.Println("  +--------------------+")
 	fmt.Println("  |  | up  | dn  | cab |")
 	for f := NumFloors - 1; f >= 0; f-- {
@@ -99,8 +100,13 @@ func Elevator_uninitialized(myID string) Elevator {
 	elev.ElevatorID = myID
 	elev.Operating = WS_Unconnected
 	elev.OrderNumber = 0
+	elev.SingleElevator = true
 
 	return elev
+}
+
+func GetSingleEleavtorStruct() Elevator{
+	return elevator
 }
 
 func Elevator_increaseOrderNumber() {
@@ -113,4 +119,11 @@ func IsDoorOpen() bool {
 		doorOpen = true
 	}
 	return doorOpen
+}
+
+func GetIAmAlone() bool {
+	return elevator.SingleElevator
+}
+func SetIAmAlone(alone bool) {
+	elevator.SingleElevator = alone
 }
