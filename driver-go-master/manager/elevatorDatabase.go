@@ -3,7 +3,7 @@ package manager
 import (
 	"Driver-go/elevator"
 	"Driver-go/elevio"
-	
+
 	"fmt"
 )
 
@@ -69,15 +69,15 @@ func IsElevatorInDatabase(elevatorID string, database ElevatorDatabase) bool {
 	return false
 }
 
-func UpdateDatabase(aliveMsg elevator.IAmAliveMessageStruct, database ElevatorDatabase) {
+func UpdateDatabase(elevatorToBeUpdated elevator.Elevator, database ElevatorDatabase) {
 
-	if aliveMsg.Elevator.Operating != elevator.WS_Immobile {
-		aliveMsg.Elevator.Operating = elevator.WS_Connected //OBS! Nå håndterer vi running-state som connected
+	if elevatorToBeUpdated.Operating != elevator.WS_Immobile {
+		elevatorToBeUpdated.Operating = elevator.WS_Connected //OBS! Nå håndterer vi running-state som connected
 	}
 
 	for i := 0; i < database.NumElevators; i++ {
-		if database.ElevatorsInNetwork[i].ElevatorID == aliveMsg.ElevatorID {
-			database.ElevatorsInNetwork[i] = aliveMsg.Elevator
+		if database.ElevatorsInNetwork[i].ElevatorID == elevatorToBeUpdated.ElevatorID {
+			database.ElevatorsInNetwork[i] = elevatorToBeUpdated
 		}
 	}
 }
@@ -147,4 +147,40 @@ func SendCabCallsForElevator(orderTx chan elevator.OrderMessageStruct, database 
 			}
 		}
 	}
+}
+
+//ny meldinger oppdtaeres i databasen, og heisen henter inn fra databasen hvor den skal kjøre
+
+func SearchMessageOrderUpdate(aliveMessage elevator.IAmAliveMessageStruct, database ElevatorDatabase) elevator.Elevator {
+	localElevator := GetElevatorFromID(database, elevator.MyID)
+
+	for floor := 0; floor < elevator.NumFloors; floor++ {
+		for button := elevio.BT_HallUp; button < elevio.BT_Cab; button++ {
+
+			if aliveMessage.Elevator.Requests[floor][button].OrderState != localElevator.Requests[floor][button].OrderState ||
+				aliveMessage.Elevator.Requests[floor][button].ElevatorID != localElevator.Requests[floor][button].ElevatorID {
+				//Kan oppstå forskjellige IDer ved reassignment
+				switch aliveMessage.Elevator.Requests[floor][button].OrderState {
+				case elevator.SO_NoOrder:
+					if localElevator.Requests[floor][button].ElevatorID == aliveMessage.ElevatorID {
+						localElevator.Requests[floor][button].OrderState = elevator.SO_NoOrder
+						localElevator.Requests[floor][button].ElevatorID = ""
+					}
+				case elevator.SO_NewOrder:
+					if aliveMessage.Elevator.Requests[floor][button].ElevatorID == localElevator.ElevatorID {
+						localElevator.Requests[floor][button].OrderState = elevator.SO_Confirmed
+						localElevator.Requests[floor][button].ElevatorID = localElevator.ElevatorID
+					} else if aliveMessage.Elevator.Requests[floor][button].ElevatorID != localElevator.ElevatorID {
+						localElevator.Requests[floor][button] = aliveMessage.Elevator.Requests[floor][button]
+					}
+				case elevator.SO_Confirmed:
+					if localElevator.Requests[floor][button].ElevatorID == aliveMessage.ElevatorID {
+						localElevator.Requests[floor][button].OrderState = elevator.SO_Confirmed
+					}
+				}
+			}
+		}
+	}
+
+	return localElevator
 }

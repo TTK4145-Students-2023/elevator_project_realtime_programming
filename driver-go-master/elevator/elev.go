@@ -25,21 +25,29 @@ const (
 	WS_Immobile
 )
 
+type StateOfOrder int
+
+const (
+	SO_NoOrder = iota
+	SO_NewOrder
+	SO_Confirmed
+)
+
 type OrderpanelPair struct {
-	order      bool
+	OrderState StateOfOrder
 	ElevatorID string
 }
 
 type Elevator struct {
-	Floor       int
-	ElevatorID  string
-	Dirn        elevio.MotorDirection
-	Requests    [NumFloors][NumButtons]OrderpanelPair
-	Behaviour   ElevatorBehaviour
-	DoorOpen    bool
-	Operating   WorkingState
+	Floor          int
+	ElevatorID     string
+	Dirn           elevio.MotorDirection
+	Requests       [NumFloors][NumButtons]OrderpanelPair
+	Behaviour      ElevatorBehaviour
+	DoorOpen       bool
+	Operating      WorkingState
 	SingleElevator bool
-	OrderNumber int
+	OrderNumber    int
 }
 
 func ebToString(eb ElevatorBehaviour) string {
@@ -105,7 +113,7 @@ func Elevator_uninitialized(myID string) Elevator {
 	return elev
 }
 
-func GetSingleEleavtorStruct() Elevator{
+func GetSingleEleavtorStruct() Elevator {
 	return elevator
 }
 

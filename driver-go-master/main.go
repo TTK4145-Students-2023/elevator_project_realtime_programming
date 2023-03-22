@@ -55,6 +55,8 @@ func main() {
 	aliveTx := make(chan elevator.IAmAliveMessageStruct)
 	aliveRx := make(chan elevator.IAmAliveMessageStruct)
 
+	newQueue := make(chan elevator.Elevator)
+
 	//ackTx := make(chan manager.AckMessage) Disse kanalene for å sende acks
 	//ackRx := make(chan manager.AckMessage)
 
@@ -104,6 +106,7 @@ func main() {
 
 		select {
 		case floor := <-drv_floors:
+
 			//immobilityTimer.Stop()
 			//fmt.Println("Stoppet immobility timer on floorArrival")
 			//elevator.SetWorkingState(elevator.WS_Connected)
@@ -201,8 +204,17 @@ func main() {
 			/*if !manager.IsElevatorInDatabase(aliveMsg.ElevatorID, database) {
 				database.ElevatorsInNetwork = append(database.ElevatorsInNetwork, aliveMsg.Elevator)
 			}*/
+			if aliveMsg.ElevatorID != elevator.MyID {
+				elevatorFromSearch := manager.SearchMessageOrderUpdate(aliveMsg, database)
+				manager.UpdateDatabase(elevatorFromSearch, database)
+				//Skriv til kanal for å oppdatere kjørekøen til din lokale heis
+				newQueue <- elevatorFromSearch
+			}
 
-			manager.UpdateDatabase(aliveMsg, database)
+			manager.UpdateDatabase(aliveMsg.Elevator, database)
+
+		case update := <-newQueue:
+			elevator.Fsm_updateQueue(update)
 
 		case p := <-peerUpdateCh:
 			fmt.Printf("Peer update:\n")

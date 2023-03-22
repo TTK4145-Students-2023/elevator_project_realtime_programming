@@ -20,7 +20,10 @@ func Fsm_init() {
 func SetAllLights(es Elevator) {
 	for floor := 0; floor < NumFloors; floor++ {
 		for btn := elevio.BT_HallUp; btn < NumButtons; btn++ {
-			elevio.SetButtonLamp(btn, floor, es.Requests[floor][btn].order)
+			if es.Requests[floor][btn].OrderState == SO_Confirmed {
+				elevio.SetButtonLamp(btn, floor, true)
+			}
+			//elevio.SetButtonLamp(btn, floor, es.Requests[floor][btn].order)
 			//Vurderte individuell sjekk på cab, men fordi caben kun er intern i arrayet, så må det være denne heisens cab uansett
 		}
 	}
@@ -44,16 +47,16 @@ func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType, chosenEle
 			doorTimer.Reset(3 * time.Second)
 			fmt.Println("Her kan vi kjøre clearOnFloor()")
 		} else {
-			elevator.Requests[btnFloor][btnType].order = true
+			elevator.Requests[btnFloor][btnType].OrderState = SO_NewOrder
 			elevator.Requests[btnFloor][btnType].ElevatorID = chosenElevator
 		}
 	case EB_Moving:
 		immobilityTimer.Reset(3 * time.Second)
 		fmt.Println("Nå har jeg resetet immobilityTimer i Fsm_Req, case EB_Moving_1")
-		elevator.Requests[btnFloor][btnType].order = true
+		elevator.Requests[btnFloor][btnType].OrderState = SO_NewOrder
 		elevator.Requests[btnFloor][btnType].ElevatorID = chosenElevator
 	case EB_Idle:
-		elevator.Requests[btnFloor][btnType].order = true
+		elevator.Requests[btnFloor][btnType].OrderState = SO_NewOrder
 		elevator.Requests[btnFloor][btnType].ElevatorID = chosenElevator
 		pair := Requests_chooseDirection(elevator)
 		elevator.Dirn = pair.dirn
@@ -134,4 +137,8 @@ func Fsm_onDoorTimeout(timer *time.Timer) {
 
 	fmt.Println("\nNew state:")
 	ElevatorPrint(elevator)
+}
+
+func Fsm_updateQueue(updatedElevator Elevator) {
+	elevator.Requests = updatedElevator.Requests
 }
