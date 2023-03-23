@@ -55,16 +55,12 @@ func main() {
 	aliveTx := make(chan elevator.IAmAliveMessageStruct)
 	aliveRx := make(chan elevator.IAmAliveMessageStruct)
 
-	newOrder := make(chan elevator.Elevator)
-	confirmedOrderChan := make(chan elevator.OrderMessageStruct)
-
 	//ackTx := make(chan manager.AckMessage) Disse kanalene for å sende acks
 	//ackRx := make(chan manager.AckMessage)
 
 	go bcast.Transmitter(16569, orderTx, aliveTx, floorArrivalTx)
 	go bcast.Receiver(16569, orderRx, aliveRx, floorArrivalRx)
 
-	go elevator.SendIAmAlive(aliveTx)
 	//port: 16569
 
 	fmt.Println("Started!")
@@ -94,13 +90,15 @@ func main() {
 	go elevio.PollObstructionSwitch(drv_obstr)
 	go elevio.PollStopButton(drv_stop)
 
-	go manager.AliveMessageReceiver(aliveRx, database, newOrder, confirmedOrderChan)
+	//go manager.AliveMessageReceiver(aliveRx, database, newOrder, confirmedOrderChan)
 
 	//input := elevioGetInputDevice()
 
 	if elevio.GetFloor() == -1 {
 		elevator.Fsm_onInitBetweenFloors()
 	}
+
+	go elevator.SendIAmAlive(aliveTx)
 
 	//prev := [nFloors][nButtons]int{}
 
@@ -112,16 +110,21 @@ func main() {
 			//immobilityTimer.Stop()
 			//fmt.Println("Stoppet immobility timer on floorArrival")
 			//elevator.SetWorkingState(elevator.WS_Connected)
-			elevator.Fsm_onFloorArrival(floor, doorTimer, immobilityTimer)
+			var newUpdate elevator.Elevator
+			newUpdate = elevator.Fsm_onFloorArrival(floor, doorTimer, immobilityTimer)
+			database = manager.UpdateDatabase(newUpdate, database)
 
 		case button := <-drv_buttons:
+			var newUpdate elevator.Elevator
 			chosenElevator := manager.AssignOrderToElevator(database, button)
 
 			if chosenElevator == elevator.MyID { // || orderBroadcast.OrderedButton.Button != elevio.BT_Cab {
-				elevator.Fsm_onRequestButtonPress(button.Floor, button.Button, chosenElevator, doorTimer, immobilityTimer) //En toer vil bli satt
+				newUpdate = elevator.Fsm_onRequestButtonPress(button.Floor, button.Button, chosenElevator, doorTimer, immobilityTimer) //En toer vil bli satt
 			} else {
-				elevator.Fsm_localNewOrder(button, chosenElevator)
+				newUpdate = elevator.Fsm_setLocalNewOrder(button, chosenElevator)
 			}
+
+			database = manager.UpdateDatabase(newUpdate, database)
 
 		case obstruction := <-drv_obstr:
 			if elevator.IsDoorOpen() && obstruction {
@@ -136,22 +139,44 @@ func main() {
 			}
 
 		case <-doorTimer.C:
-
 			elevator.Fsm_onDoorTimeout(doorTimer)
 
 		case <-immobilityTimer.C:
 			//skal redestribute ordre
 			elevator.SetWorkingState(elevator.WS_Immobile)
-			manager.UpdateElevatorNetworkStateInDatabase(elevator.MyID, database, elevator.WS_Immobile)
+			database = manager.UpdateElevatorNetworkStateInDatabase(elevator.MyID, database, elevator.WS_Immobile)
 			manager.ReassignDeadOrders(orderTx, database, elevator.MyID)
 			fmt.Println("Iam immobile", elevator.MyID)
 
-		case order := <-confirmedOrderChan:
-			elevator.Fsm_onRequestButtonPress(order.OrderedButton.Floor, order.OrderedButton.Button, order.ChosenElevator, doorTimer, immobilityTimer)
+		case aliveMessage := <-aliveRx:
+			if aliveMessage.ElevatorID != elevator.MyID {
+				newChangedOrders := manager.SearchMessageOrderUpdate(aliveMessage, database)
 
-		case update := <-newOrder:
-			elevator.Fsm_updateLocalRequests(update)
-			database = manager.UpdateDatabase(update, database)
+				for i := 0; i < len(newChangedOrders); i++ {
+					newOrder := newChangedOrders[i]
+					var newUpdate elevator.Elevator
+
+					if newOrder.PanelPair.OrderState == elevator.SO_Confirmed {
+						fmt.Println("Jeg har nå fått bekreftet denne orderen: Floor ", newOrder.OrderedButton.Floor, " - Button ",
+							newOrder.OrderedButton.Button, " - chosenElevator ", newOrder.PanelPair.ElevatorID)
+						if newOrder.PanelPair.ElevatorID == elevator.MyID {
+							fmt.Println("...og den skulle jeg ta selv, så nå kjører jeg Fsm_onReqButPress")
+							newUpdate = elevator.Fsm_onRequestButtonPress(newOrder.OrderedButton.Floor, newOrder.OrderedButton.Button, newOrder.PanelPair.ElevatorID, doorTimer, immobilityTimer)
+						} else {
+							fmt.Println("...men den skulle tas av noen andre, så jeg setter bare en localConfirmedOrder.")
+							newUpdate = elevator.Fsm_setLocalConfirmedOrder(newOrder.OrderedButton, newOrder.PanelPair.ElevatorID)
+						}
+					} else if newOrder.PanelPair.OrderState == elevator.SO_NoOrder {
+						fmt.Println("Jeg har nå fått beskjed om å cleare denne orderen: Floor ", newOrder.OrderedButton.Floor, " - Button ",
+							newOrder.OrderedButton.Button, " - chosenElevator ", newOrder.PanelPair.ElevatorID)
+						newUpdate = elevator.Requests_clearOnFloor(newOrder.PanelPair.ElevatorID, newOrder.OrderedButton.Floor)
+					}
+
+					database = manager.UpdateDatabase(newUpdate, database)
+				}
+				//database = manager.UpdateDatabase(elevatorFromSearch, database)
+				//elevator.Fsm_updateLocalRequests(elevatorFromSearch)
+			}
 
 		case p := <-peerUpdateCh:
 			fmt.Printf("Peer update:\n")
@@ -168,7 +193,7 @@ func main() {
 					for i := 0; i < len(database.ElevatorsInNetwork); i++ {
 						elevator.ElevatorPrint(database.ElevatorsInNetwork[i])
 					}
-					manager.ReassignDeadOrders(orderTx, database, p.Lost[i])
+					//manager.ReassignDeadOrders(orderTx, database, p.Lost[i])
 					database.NumElevators--
 				}
 				if database.NumElevators <= 1 {

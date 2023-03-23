@@ -11,9 +11,9 @@ type OrderMessageStruct struct {
 	ElevatorID string
 
 	//orderCounter int
-	OrderedButton  elevio.ButtonEvent
-	ChosenElevator string
-	MyElevator     Elevator
+	OrderedButton elevio.ButtonEvent
+	PanelPair     OrderpanelPair
+	MyElevator    Elevator
 }
 
 type FloorArrivalMessageStruct struct {
@@ -44,13 +44,13 @@ func MakeFloorMessage(floor int) FloorArrivalMessageStruct {
 	return floorMsg
 }
 
-func MakeOrderMessage(chosenElevator string, button elevio.ButtonEvent) OrderMessageStruct {
+func MakeOrderMessage(panelPair OrderpanelPair, button elevio.ButtonEvent) OrderMessageStruct {
 	orderMsg := OrderMessageStruct{SystemID: "Gruppe10",
-		MessageID:      "Order",
-		ElevatorID:     MyID,
-		OrderedButton:  button,
-		ChosenElevator: chosenElevator,
-		MyElevator:     elevator}
+		MessageID:     "Order",
+		ElevatorID:    MyID,
+		OrderedButton: button,
+		PanelPair:     panelPair,
+		MyElevator:    elevator}
 
 	return orderMsg
 }

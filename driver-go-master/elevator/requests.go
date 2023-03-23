@@ -2,6 +2,7 @@ package elevator
 
 import (
 	"Driver-go/elevio"
+	"fmt"
 )
 
 type DirnBehaviourPair struct {
@@ -92,7 +93,7 @@ func Requests_shouldStop(e Elevator) bool {
 			!Requests_below(e) //mulig vi må legge til ID-sjekk
 
 	case elevio.MD_Up:
-		return (e.Requests[e.Floor][elevio.BT_HallUp].OrderState == SO_Confirmed && e.Requests[e.Floor][elevio.BT_HallUp].ElevatorID == e.ElevatorID)||
+		return (e.Requests[e.Floor][elevio.BT_HallUp].OrderState == SO_Confirmed && e.Requests[e.Floor][elevio.BT_HallUp].ElevatorID == e.ElevatorID) ||
 			e.Requests[e.Floor][elevio.BT_Cab].OrderState == SO_Confirmed ||
 			!Requests_above(e)
 
@@ -104,7 +105,6 @@ func Requests_shouldStop(e Elevator) bool {
 func Requests_shouldClearImmediately(e Elevator, btn_floor int, btn_type elevio.ButtonType) bool {
 	return e.Floor == btn_floor && ((e.Dirn == elevio.MD_Up && btn_type == elevio.BT_HallUp) ||
 		(e.Dirn == elevio.MD_Down && btn_type == elevio.BT_HallDown) || e.Dirn == elevio.MD_Stop || btn_type == elevio.BT_Cab)
-
 }
 
 func Requests_clearAtCurrentFloor(e Elevator) Elevator {
@@ -137,17 +137,17 @@ func Requests_clearAtCurrentFloor(e Elevator) Elevator {
 	return e
 }
 
-func Requests_clearOnFloor(arrivedElevatorID string, floor int) {
+func Requests_clearOnFloor(arrivedElevatorID string, floor int) Elevator {
 	//Trenger vel egt ikke å sjekke om det er en ordre her fordi hvis den er fordelt,
 	//så er det jo en ordre der.
 	//OBS! Må sjekke state til heis fordi det kan skje at den ikke skal cleare. Litt mer kopi av Req_clearAtCurrFloor(). Eks: hente ut state fra database
-
-	if elevator.Requests[floor][elevio.BT_HallDown].OrderState == SO_Confirmed &&
+	fmt.Println("Her clearer jeg bestillingen på floor", floor, ", som var fordelt til", arrivedElevatorID)
+	if elevator.Requests[floor][elevio.BT_HallDown].OrderState != SO_NoOrder &&
 		(arrivedElevatorID == elevator.Requests[floor][elevio.BT_HallDown].ElevatorID) {
 		elevator.Requests[floor][elevio.BT_HallDown].OrderState = SO_NoOrder
 		elevator.Requests[floor][elevio.BT_HallDown].ElevatorID = ""
 		elevio.SetButtonLamp(elevio.BT_HallDown, floor, false) // La til denne men vet ikke hvorfor denne må være her siden setAlllights egentlig skal cleare lyset nederst
-	} else if elevator.Requests[floor][elevio.BT_HallUp].OrderState == SO_Confirmed &&
+	} else if elevator.Requests[floor][elevio.BT_HallUp].OrderState != SO_NoOrder &&
 		(arrivedElevatorID == elevator.Requests[floor][elevio.BT_HallUp].ElevatorID) {
 		elevator.Requests[floor][elevio.BT_HallUp].OrderState = SO_NoOrder
 		elevator.Requests[floor][elevio.BT_HallUp].ElevatorID = ""
@@ -155,6 +155,7 @@ func Requests_clearOnFloor(arrivedElevatorID string, floor int) {
 	}
 
 	SetAllLights(elevator)
+	return elevator
 }
 
 // ////////////////////////

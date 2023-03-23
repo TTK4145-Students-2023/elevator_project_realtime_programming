@@ -89,12 +89,8 @@ func ElevatorPrint(es Elevator) {
 	for f := NumFloors - 1; f >= 0; f-- {
 		fmt.Printf("  | %d", f)
 		for btn := 0; btn < NumButtons; btn++ {
-			if (f == NumButtons-1 && btn == int(elevio.BT_HallUp)) ||
-				(f == 0 && btn == int(elevio.BT_HallDown)) {
-				fmt.Print("|    ")
-			} else {
-				fmt.Print(es.Requests[f][btn])
-			}
+
+			fmt.Print(es.Requests[f][btn])
 		}
 		fmt.Print("|\n")
 	}
@@ -138,4 +134,8 @@ func SetIAmAlone(alone bool) {
 
 func SetWorkingState(state WorkingState) {
 	elevator.Operating = state
+}
+
+func AvailableAtCurrFloor(floor int) bool {
+	return (elevator.Floor == floor) && (elevator.Behaviour == EB_Idle)
 }

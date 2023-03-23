@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-const MyID = "15000"
+const MyID = "17000"
 
 var elevator = Elevator_uninitialized(MyID)
 
@@ -37,7 +37,7 @@ func Fsm_onInitBetweenFloors() {
 	elevator.Behaviour = EB_Moving
 }
 
-func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType, chosenElevator string, doorTimer *time.Timer, immobilityTimer *time.Timer) {
+func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType, chosenElevator string, doorTimer *time.Timer, immobilityTimer *time.Timer) Elevator {
 	//fmt.Printf("\n\n%s(%d, %s)\n", "fsm_onRequestButtonPress", btnFloor, btnType.ToString())
 	ElevatorPrint(elevator)
 	//fmt.Println(calculateCost(&elevator, btnFloor))
@@ -46,8 +46,10 @@ func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType, chosenEle
 	switch elevator.Behaviour {
 	case EB_DoorOpen:
 		if Requests_shouldClearImmediately(elevator, btnFloor, btnType) {
+			elevator = Requests_clearAtCurrentFloor(elevator)
 			doorTimer.Reset(3 * time.Second)
-			fmt.Println("Her kan vi kjøre clearOnFloor()")
+			fmt.Println("Vi har inne i Fsm_onReqButPress fått beskjed om at vi shouldClearImmediately")
+			elevator = Requests_clearOnFloor(elevator.ElevatorID, elevator.Floor)
 		} else {
 			elevator.Requests[btnFloor][btnType].OrderState = SO_Confirmed
 			elevator.Requests[btnFloor][btnType].ElevatorID = chosenElevator
@@ -80,14 +82,25 @@ func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType, chosenEle
 
 	fmt.Printf("\nNew state:\n")
 	ElevatorPrint(elevator)
+	return elevator
 }
 
-func Fsm_localNewOrder(button elevio.ButtonEvent, chosenElevator string) {
+func Fsm_setLocalNewOrder(button elevio.ButtonEvent, chosenElevator string) Elevator {
 	elevator.Requests[button.Floor][button.Button].OrderState = SO_NewOrder
 	elevator.Requests[button.Floor][button.Button].ElevatorID = chosenElevator
+	fmt.Println("Mine lokale requests er nå: ", elevator.Requests)
+	return elevator
 }
 
-func Fsm_onFloorArrival(newFloor int, doorTimer *time.Timer, immobilityTimer *time.Timer) {
+func Fsm_setLocalConfirmedOrder(button elevio.ButtonEvent, chosenElevator string) Elevator {
+	elevator.Requests[button.Floor][button.Button].OrderState = SO_Confirmed
+	elevator.Requests[button.Floor][button.Button].ElevatorID = chosenElevator
+	fmt.Println("Mine lokale requests er nå: ", elevator.Requests)
+	SetAllLights(elevator)
+	return elevator
+}
+
+func Fsm_onFloorArrival(newFloor int, doorTimer *time.Timer, immobilityTimer *time.Timer) Elevator {
 	fmt.Printf("\n\n%s(%d)\n", "fsm_onFloorArrival", newFloor)
 	ElevatorPrint(elevator)
 
@@ -115,6 +128,7 @@ func Fsm_onFloorArrival(newFloor int, doorTimer *time.Timer, immobilityTimer *ti
 
 	fmt.Printf("\nNew state:\n")
 	ElevatorPrint(elevator)
+	return elevator
 }
 
 func Fsm_onDoorTimeout(timer *time.Timer) {
