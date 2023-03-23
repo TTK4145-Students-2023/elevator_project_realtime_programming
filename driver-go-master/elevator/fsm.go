@@ -88,14 +88,14 @@ func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType, chosenEle
 func Fsm_setLocalNewOrder(button elevio.ButtonEvent, chosenElevator string) Elevator {
 	elevator.Requests[button.Floor][button.Button].OrderState = SO_NewOrder
 	elevator.Requests[button.Floor][button.Button].ElevatorID = chosenElevator
-	fmt.Println("Mine lokale requests er nå: ", elevator.Requests)
+	fmt.Println("Jeg har fått en ny ordre lokalt. Mine lokale requests er nå: ", elevator.Requests)
 	return elevator
 }
 
 func Fsm_setLocalConfirmedOrder(button elevio.ButtonEvent, chosenElevator string) Elevator {
 	elevator.Requests[button.Floor][button.Button].OrderState = SO_Confirmed
 	elevator.Requests[button.Floor][button.Button].ElevatorID = chosenElevator
-	fmt.Println("Mine lokale requests er nå: ", elevator.Requests)
+	fmt.Println("Jeg har bekreftet en ny ordre lokalt. Mine lokale requests er nå: ", elevator.Requests)
 	SetAllLights(elevator)
 	return elevator
 }

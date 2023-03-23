@@ -19,7 +19,7 @@ func AssignOrderToElevator(database ElevatorDatabase, order elevio.ButtonEvent) 
 	elevatorID := ""
 
 	connectedElevators := database.ElevatorsInNetwork
-	fmt.Println("The connected elevators are: ", len(connectedElevators))
+	fmt.Println("The number of elevators that we have data on in the database is: ", len(connectedElevators))
 	fmt.Println("And the number of connected elevators is: ", database.NumElevators)
 
 	if order.Button == elevio.BT_Cab || elevator.GetIAmAlone() {
@@ -37,15 +37,18 @@ func AssignOrderToElevator(database ElevatorDatabase, order elevio.ButtonEvent) 
 		}
 	}
 
-	fmt.Println("Assigned order to: ", elevatorID)
+	fmt.Println("Assigned order to:", elevatorID)
 	return elevatorID
 }
 
-func ReassignDeadOrders(orderTx chan elevator.OrderMessageStruct, database ElevatorDatabase, deadElevatorID string) {
+func ReassignDeadOrders(database ElevatorDatabase, deadElevatorID string) []elevio.ButtonEvent {
 	deadElev := GetElevatorFromID(database, deadElevatorID)
 	fmt.Println(" -----dead elevator id -----")
 	fmt.Println(deadElev.ElevatorID)
-	fmt.Println(("here are the orders"))
+	fmt.Println("here are the orders")
+
+	var ordersToBeReassigned []elevio.ButtonEvent
+
 	for floor := 0; floor < elevator.NumFloors; floor++ {
 		for button := elevio.BT_HallUp; button < elevio.BT_Cab; button++ {
 			var order elevio.ButtonEvent
@@ -54,14 +57,18 @@ func ReassignDeadOrders(orderTx chan elevator.OrderMessageStruct, database Eleva
 			fmt.Println(deadElev.Requests[floor][button])
 
 			if deadElev.Requests[floor][button].ElevatorID == deadElevatorID {
+				//newChosenElevator := AssignOrderToElevator(database, order)
+
 				fmt.Println("--------------FOUND DEADORDER--------------------------")
+				ordersToBeReassigned = append(ordersToBeReassigned, order)
 				//SendOrderMessage(orderTx, order, database)
 			}
 		}
 
 	}
-	fmt.Println("-----------------REASSIGNED-----------------")
-	elevator.ElevatorPrint(GetElevatorFromID(database, elevator.MyID))
+	fmt.Println("I am now going to reassign these orders:", ordersToBeReassigned)
+
+	return ordersToBeReassigned
 }
 
 func IsElevatorInDatabase(elevatorID string, database ElevatorDatabase) bool {
@@ -136,7 +143,8 @@ func GetElevatorFromID(database ElevatorDatabase, elevatorID string) elevator.El
 	orderTx <- orderMsg
 }*/
 
-func SendCabCallsForElevator(orderTx chan elevator.OrderMessageStruct, database ElevatorDatabase, newPeer string) {
+func SendCabCallsForElevator(database ElevatorDatabase, newPeer string) []elevio.ButtonEvent {
+	var cabsToBeSent []elevio.ButtonEvent
 	for i := 0; i < len(database.ElevatorsInNetwork); i++ {
 		if database.ElevatorsInNetwork[i].ElevatorID == newPeer {
 			fmt.Println("her har den matchende id som den som kom tilbake")
@@ -145,12 +153,13 @@ func SendCabCallsForElevator(orderTx chan elevator.OrderMessageStruct, database 
 					var button elevio.ButtonEvent
 					button.Floor = floor
 					button.Button = elevio.BT_Cab
-					fmt.Println("Cab call to be sent: ", button)
-					//orderTx <- elevator.MakeOrderMessage(newPeer, button)
+					fmt.Println("Cab call to be sent:", button)
+					cabsToBeSent = append(cabsToBeSent, button)
 				}
 			}
 		}
 	}
+	return cabsToBeSent
 }
 
 //ny meldinger oppdtaeres i databasen, og heisen henter inn fra databasen hvor den skal kjøre
@@ -171,6 +180,8 @@ func SearchMessageOrderUpdate(aliveMessage elevator.IAmAliveMessageStruct, datab
 
 				fmt.Println("Jeg har funnet en forskjell!\nMottatt array: ", aliveMessage.Elevator.Requests)
 				fmt.Println("Mitt lokale array: ", localElevator.Requests)
+				fmt.Println("Er det en forskjell i ID-en på hvem orderen er fordelt til? Svar:",
+					aliveMessage.Elevator.Requests[floor][button].ElevatorID != localElevator.Requests[floor][button].ElevatorID)
 				//OBS! Kan oppstå forskjellige IDer ved reassignment
 				//switch aliveMessage.Elevator.Requests[floor][button].OrderState {
 				//case elevator.SO_NoOrder:
@@ -187,7 +198,7 @@ func SearchMessageOrderUpdate(aliveMessage elevator.IAmAliveMessageStruct, datab
 						localElevator.Requests[floor][button].ElevatorID = ""
 						//Vi må legge noe append her sånn at det oppdateres utenfor scopet også
 					} else if localElevator.Requests[floor][button].ElevatorID == aliveMessage.ElevatorID &&
-					localElevator.Requests[floor][button].OrderState == elevator.SO_NewOrder{
+						localElevator.Requests[floor][button].OrderState == elevator.SO_NewOrder {
 						panelPair := elevator.OrderpanelPair{ElevatorID: aliveMessage.ElevatorID, OrderState: elevator.SO_NoOrder}
 						newChangedOrders = append(newChangedOrders, elevator.MakeOrderMessage(panelPair, elevio.ButtonEvent{Floor: floor, Button: button}))
 

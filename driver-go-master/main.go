@@ -145,11 +145,13 @@ func main() {
 			//skal redestribute ordre
 			elevator.SetWorkingState(elevator.WS_Immobile)
 			database = manager.UpdateElevatorNetworkStateInDatabase(elevator.MyID, database, elevator.WS_Immobile)
-			manager.ReassignDeadOrders(orderTx, database, elevator.MyID)
+			manager.ReassignDeadOrders(database, elevator.MyID)
 			fmt.Println("Iam immobile", elevator.MyID)
 
 		case aliveMessage := <-aliveRx:
 			if aliveMessage.ElevatorID != elevator.MyID {
+				database = manager.UpdateDatabase(aliveMessage.Elevator, database)
+
 				newChangedOrders := manager.SearchMessageOrderUpdate(aliveMessage, database)
 
 				for i := 0; i < len(newChangedOrders); i++ {
@@ -186,20 +188,39 @@ func main() {
 
 			//legg dette inn i updatenetwork state
 			if len(p.Lost) != 0 {
+				var ordersToBeReassigned []elevio.ButtonEvent
 				for i := 0; i < len(p.Lost); i++ {
-					manager.UpdateElevatorNetworkStateInDatabase(p.Lost[i], database, elevator.WS_Unconnected)
 					fmt.Println("Lost elevator requests: ", manager.GetElevatorFromID(database, p.Lost[i]).Requests)
+					manager.UpdateElevatorNetworkStateInDatabase(p.Lost[i], database, elevator.WS_Unconnected)
 					fmt.Println("This is the database: ")
 					for i := 0; i < len(database.ElevatorsInNetwork); i++ {
 						elevator.ElevatorPrint(database.ElevatorsInNetwork[i])
 					}
-					//manager.ReassignDeadOrders(orderTx, database, p.Lost[i])
+					ordersToBeReassigned = manager.ReassignDeadOrders(database, p.Lost[i])
 					database.NumElevators--
+
+					if database.NumElevators <= 1 {
+						elevator.SetIAmAlone(true)
+						fmt.Println("I am alone", elevator.GetIAmAlone())
+					}
 				}
-				if database.NumElevators <= 1 {
-					elevator.SetIAmAlone(true)
-					fmt.Println("I am alone", elevator.GetIAmAlone())
+				for j := 0; j < len(ordersToBeReassigned); j++ {
+					//newUpdate := elevator.Requests_clearOnFloor(p.Lost[i], ordersToBeReassigned[j].Floor) //OBS! Denne fjerner vel lys i etasjen, men kanskje det settes umerkbart fort igjen?
+					//database = manager.UpdateDatabase(newUpdate, database)
+
+					button := ordersToBeReassigned[j] //prøvde her å skrive direkte til drv_buttons, men da oppstod det en lock
+					var newUpdate elevator.Elevator
+					chosenElevator := manager.AssignOrderToElevator(database, button)
+					fmt.Println("The chosen elevator for the reassignment is: ")
+					if chosenElevator == elevator.MyID { // || orderBroadcast.OrderedButton.Button != elevio.BT_Cab {
+						newUpdate = elevator.Fsm_onRequestButtonPress(button.Floor, button.Button, chosenElevator, doorTimer, immobilityTimer) //En toer vil bli satt
+					} else {
+						newUpdate = elevator.Fsm_setLocalNewOrder(button, chosenElevator)
+					}
+
+					database = manager.UpdateDatabase(newUpdate, database)
 				}
+
 			}
 
 			if p.New != "" {
@@ -214,8 +235,9 @@ func main() {
 				}
 
 				if !elevator.GetIAmAlone() {
-					fmt.Println("Ready to send CABs")
-					manager.SendCabCallsForElevator(orderTx, database, p.New)
+					cabsToBeSent := manager.SendCabCallsForElevator(database, p.New)
+					fmt.Println("Ready to send the following CABs:", cabsToBeSent)
+					//OBS! Kanskje vi må lage en egen kanal for dette?
 				}
 
 				database.NumElevators++
@@ -228,11 +250,6 @@ func main() {
 			// 	reload orders
 
 		}
-
-		//case: mottatt broadcast-ordre
-		//putt i array (for å stoppe ved onFloorArrival)
-		//Hvis mottatt ordre har min elevatorID:
-		//Fsm_onReq
 
 		time.Sleep(time.Duration(inputPollRateMs) * time.Millisecond)
 	}
