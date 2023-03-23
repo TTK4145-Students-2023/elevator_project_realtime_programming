@@ -69,8 +69,7 @@ func IsElevatorInDatabase(elevatorID string, database ElevatorDatabase) bool {
 	return false
 }
 
-func UpdateDatabase(elevatorToBeUpdated elevator.Elevator, database ElevatorDatabase) {
-
+func UpdateDatabase(elevatorToBeUpdated elevator.Elevator, database ElevatorDatabase) ElevatorDatabase {
 	if elevatorToBeUpdated.Operating != elevator.WS_Immobile {
 		elevatorToBeUpdated.Operating = elevator.WS_Connected //OBS! Nå håndterer vi running-state som connected
 	}
@@ -80,10 +79,10 @@ func UpdateDatabase(elevatorToBeUpdated elevator.Elevator, database ElevatorData
 			database.ElevatorsInNetwork[i] = elevatorToBeUpdated
 		}
 	}
+	return database
 }
 
 func WhatFloorIsElevatorFromStringID(database ElevatorDatabase, elevatorID string) int {
-
 	for i := 0; i < database.NumElevators; i++ {
 		if database.ElevatorsInNetwork[i].ElevatorID == elevatorID {
 			return database.ElevatorsInNetwork[i].Floor
@@ -151,7 +150,7 @@ func SendCabCallsForElevator(orderTx chan elevator.OrderMessageStruct, database 
 
 //ny meldinger oppdtaeres i databasen, og heisen henter inn fra databasen hvor den skal kjøre
 
-func SearchMessageOrderUpdate(aliveMessage elevator.IAmAliveMessageStruct, database ElevatorDatabase) elevator.Elevator {
+func SearchMessageOrderUpdate(aliveMessage elevator.IAmAliveMessageStruct, database ElevatorDatabase, confirmedOrderChan chan elevator.OrderMessageStruct) elevator.Elevator {
 	localElevator := GetElevatorFromID(database, elevator.MyID)
 
 	for floor := 0; floor < elevator.NumFloors; floor++ {
@@ -159,23 +158,37 @@ func SearchMessageOrderUpdate(aliveMessage elevator.IAmAliveMessageStruct, datab
 
 			if aliveMessage.Elevator.Requests[floor][button].OrderState != localElevator.Requests[floor][button].OrderState ||
 				aliveMessage.Elevator.Requests[floor][button].ElevatorID != localElevator.Requests[floor][button].ElevatorID {
-				//Kan oppstå forskjellige IDer ved reassignment
-				switch aliveMessage.Elevator.Requests[floor][button].OrderState {
-				case elevator.SO_NoOrder:
-					if localElevator.Requests[floor][button].ElevatorID == aliveMessage.ElevatorID {
+				fmt.Println("Jeg har funnet en forskjell!")
+				//OBS! Kan oppstå forskjellige IDer ved reassignment
+				//switch aliveMessage.Elevator.Requests[floor][button].OrderState {
+				//case elevator.SO_NoOrder:
+				if aliveMessage.Elevator.Requests[floor][button].OrderState == elevator.SO_NoOrder {
+					if localElevator.Requests[floor][button].ElevatorID == aliveMessage.ElevatorID &&
+						localElevator.Requests[floor][button].OrderState == elevator.SO_Confirmed {
 						localElevator.Requests[floor][button].OrderState = elevator.SO_NoOrder
 						localElevator.Requests[floor][button].ElevatorID = ""
 					}
-				case elevator.SO_NewOrder:
+					//Kanal til Requests_clearOnFloor()?
+
+				}
+				if aliveMessage.Elevator.Requests[floor][button].OrderState == elevator.SO_NewOrder {
+					fmt.Println("Jeg er inne i SearchorderMsg og har en SO_NewOrder")
 					if aliveMessage.Elevator.Requests[floor][button].ElevatorID == localElevator.ElevatorID {
 						localElevator.Requests[floor][button].OrderState = elevator.SO_Confirmed
 						localElevator.Requests[floor][button].ElevatorID = localElevator.ElevatorID
+						confirmedOrderChan <- elevator.MakeOrderMessage(localElevator.ElevatorID, elevio.ButtonEvent{Floor: floor, Button: button})
 					} else if aliveMessage.Elevator.Requests[floor][button].ElevatorID != localElevator.ElevatorID {
 						localElevator.Requests[floor][button] = aliveMessage.Elevator.Requests[floor][button]
 					}
-				case elevator.SO_Confirmed:
-					if localElevator.Requests[floor][button].ElevatorID == aliveMessage.ElevatorID {
+				}
+				if aliveMessage.Elevator.Requests[floor][button].OrderState == elevator.SO_Confirmed {
+					if localElevator.Requests[floor][button].ElevatorID != aliveMessage.ElevatorID {
 						localElevator.Requests[floor][button].OrderState = elevator.SO_Confirmed
+						localElevator.Requests[floor][button].ElevatorID = aliveMessage.Elevator.Requests[floor][button].ElevatorID
+						//Kanal til Fsm_onRequestButtonPress()?
+					} else {
+						localElevator.Requests[floor][button].OrderState = elevator.SO_Confirmed
+						localElevator.Requests[floor][button].ElevatorID = localElevator.ElevatorID
 					}
 				}
 			}

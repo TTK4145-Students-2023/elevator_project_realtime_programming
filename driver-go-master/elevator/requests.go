@@ -12,7 +12,8 @@ type DirnBehaviourPair struct {
 func Requests_above(e Elevator) bool {
 	for floor := e.Floor + 1; floor < NumFloors; floor++ {
 		for btn := 0; btn < NumButtons; btn++ {
-			if e.Requests[floor][btn].OrderState == SO_Confirmed && e.Requests[floor][btn].ElevatorID == e.ElevatorID { //Antar at requests har verdi 1 om bestilling og null ellers
+			if e.Requests[floor][btn].OrderState == SO_Confirmed &&
+				e.Requests[floor][btn].ElevatorID == e.ElevatorID { //Antar at requests har verdi 1 om bestilling og null ellers
 				return true
 			}
 		}
@@ -24,7 +25,8 @@ func Requests_above(e Elevator) bool {
 func Requests_below(e Elevator) bool {
 	for floor := 0; floor < e.Floor; floor++ {
 		for btn := 0; btn < NumButtons; btn++ {
-			if e.Requests[floor][btn].OrderState == SO_Confirmed && e.Requests[floor][btn].ElevatorID == e.ElevatorID {
+			if e.Requests[floor][btn].OrderState == SO_Confirmed &&
+				e.Requests[floor][btn].ElevatorID == e.ElevatorID {
 				return true
 			}
 		}
@@ -36,7 +38,8 @@ func Requests_below(e Elevator) bool {
 func Requests_here(e Elevator) bool {
 
 	for btn := 0; btn < NumButtons; btn++ {
-		if e.Requests[e.Floor][btn].OrderState == SO_Confirmed && e.Requests[e.Floor][btn].ElevatorID == e.ElevatorID {
+		if e.Requests[e.Floor][btn].OrderState == SO_Confirmed &&
+			e.Requests[e.Floor][btn].ElevatorID == e.ElevatorID {
 			return true
 		}
 	}
@@ -84,12 +87,12 @@ func Requests_chooseDirection(e Elevator) DirnBehaviourPair {
 func Requests_shouldStop(e Elevator) bool {
 	switch e.Dirn {
 	case elevio.MD_Down:
-		return e.Requests[e.Floor][elevio.BT_HallDown].OrderState == SO_Confirmed ||
+		return (e.Requests[e.Floor][elevio.BT_HallDown].OrderState == SO_Confirmed && e.Requests[e.Floor][elevio.BT_HallDown].ElevatorID == e.ElevatorID) ||
 			e.Requests[e.Floor][elevio.BT_Cab].OrderState == SO_Confirmed ||
 			!Requests_below(e) //mulig vi må legge til ID-sjekk
 
 	case elevio.MD_Up:
-		return e.Requests[e.Floor][elevio.BT_HallUp].OrderState == SO_Confirmed ||
+		return (e.Requests[e.Floor][elevio.BT_HallUp].OrderState == SO_Confirmed && e.Requests[e.Floor][elevio.BT_HallUp].ElevatorID == e.ElevatorID)||
 			e.Requests[e.Floor][elevio.BT_Cab].OrderState == SO_Confirmed ||
 			!Requests_above(e)
 
@@ -110,25 +113,25 @@ func Requests_clearAtCurrentFloor(e Elevator) Elevator {
 	e.Requests[e.Floor][elevio.BT_Cab].ElevatorID = ""
 	switch e.Dirn {
 	case elevio.MD_Up:
-		if !Requests_above(e) && e.Requests[e.Floor][elevio.BT_HallUp].OrderState == SO_NoOrder  {
+		if !Requests_above(e) && e.Requests[e.Floor][elevio.BT_HallUp].OrderState == SO_NoOrder {
 			e.Requests[e.Floor][elevio.BT_HallDown].OrderState = SO_NoOrder
 			e.Requests[e.Floor][elevio.BT_HallDown].ElevatorID = ""
 		}
-		e.Requests[e.Floor][elevio.BT_HallUp].OrderState = SO_NoOrder 
+		e.Requests[e.Floor][elevio.BT_HallUp].OrderState = SO_NoOrder
 		e.Requests[e.Floor][elevio.BT_HallUp].ElevatorID = ""
 	case elevio.MD_Down:
-		if !Requests_below(e) && e.Requests[e.Floor][elevio.BT_HallDown].OrderState == SO_NoOrder  {
-			e.Requests[e.Floor][elevio.BT_HallUp].OrderState = SO_NoOrder 
+		if !Requests_below(e) && e.Requests[e.Floor][elevio.BT_HallDown].OrderState == SO_NoOrder {
+			e.Requests[e.Floor][elevio.BT_HallUp].OrderState = SO_NoOrder
 			e.Requests[e.Floor][elevio.BT_HallUp].ElevatorID = ""
 		}
-		e.Requests[e.Floor][elevio.BT_HallDown].OrderState = SO_NoOrder 
+		e.Requests[e.Floor][elevio.BT_HallDown].OrderState = SO_NoOrder
 		e.Requests[e.Floor][elevio.BT_HallDown].ElevatorID = ""
 	case elevio.MD_Stop:
 		fallthrough
 	default:
-		e.Requests[e.Floor][elevio.BT_HallUp].OrderState = SO_NoOrder 
+		e.Requests[e.Floor][elevio.BT_HallUp].OrderState = SO_NoOrder
 		e.Requests[e.Floor][elevio.BT_HallUp].ElevatorID = ""
-		e.Requests[e.Floor][elevio.BT_HallDown].OrderState = SO_NoOrder 
+		e.Requests[e.Floor][elevio.BT_HallDown].OrderState = SO_NoOrder
 		e.Requests[e.Floor][elevio.BT_HallDown].ElevatorID = ""
 	}
 	return e
@@ -139,7 +142,7 @@ func Requests_clearOnFloor(arrivedElevatorID string, floor int) {
 	//så er det jo en ordre der.
 	//OBS! Må sjekke state til heis fordi det kan skje at den ikke skal cleare. Litt mer kopi av Req_clearAtCurrFloor(). Eks: hente ut state fra database
 
-	if elevator.Requests[floor][elevio.BT_HallDown].OrderState == SO_Confirmed  &&
+	if elevator.Requests[floor][elevio.BT_HallDown].OrderState == SO_Confirmed &&
 		(arrivedElevatorID == elevator.Requests[floor][elevio.BT_HallDown].ElevatorID) {
 		elevator.Requests[floor][elevio.BT_HallDown].OrderState = SO_NoOrder
 		elevator.Requests[floor][elevio.BT_HallDown].ElevatorID = ""

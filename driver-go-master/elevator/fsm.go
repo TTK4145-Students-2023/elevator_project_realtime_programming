@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-const MyID = "15657"
+const MyID = "15000"
 
 var elevator = Elevator_uninitialized(MyID)
 
@@ -22,6 +22,8 @@ func SetAllLights(es Elevator) {
 		for btn := elevio.BT_HallUp; btn < NumButtons; btn++ {
 			if es.Requests[floor][btn].OrderState == SO_Confirmed {
 				elevio.SetButtonLamp(btn, floor, true)
+			} else {
+				elevio.SetButtonLamp(btn, floor, false)
 			}
 			//elevio.SetButtonLamp(btn, floor, es.Requests[floor][btn].order)
 			//Vurderte individuell sjekk på cab, men fordi caben kun er intern i arrayet, så må det være denne heisens cab uansett
@@ -47,16 +49,16 @@ func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType, chosenEle
 			doorTimer.Reset(3 * time.Second)
 			fmt.Println("Her kan vi kjøre clearOnFloor()")
 		} else {
-			elevator.Requests[btnFloor][btnType].OrderState = SO_NewOrder
+			elevator.Requests[btnFloor][btnType].OrderState = SO_Confirmed
 			elevator.Requests[btnFloor][btnType].ElevatorID = chosenElevator
 		}
 	case EB_Moving:
 		immobilityTimer.Reset(3 * time.Second)
 		fmt.Println("Nå har jeg resetet immobilityTimer i Fsm_Req, case EB_Moving_1")
-		elevator.Requests[btnFloor][btnType].OrderState = SO_NewOrder
+		elevator.Requests[btnFloor][btnType].OrderState = SO_Confirmed
 		elevator.Requests[btnFloor][btnType].ElevatorID = chosenElevator
 	case EB_Idle:
-		elevator.Requests[btnFloor][btnType].OrderState = SO_NewOrder
+		elevator.Requests[btnFloor][btnType].OrderState = SO_Confirmed
 		elevator.Requests[btnFloor][btnType].ElevatorID = chosenElevator
 		pair := Requests_chooseDirection(elevator)
 		elevator.Dirn = pair.dirn
@@ -74,11 +76,15 @@ func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType, chosenEle
 		}
 
 	}
-
 	SetAllLights(elevator)
 
 	fmt.Printf("\nNew state:\n")
 	ElevatorPrint(elevator)
+}
+
+func Fsm_localNewOrder(button elevio.ButtonEvent, chosenElevator string) {
+	elevator.Requests[button.Floor][button.Button].OrderState = SO_NewOrder
+	elevator.Requests[button.Floor][button.Button].ElevatorID = chosenElevator
 }
 
 func Fsm_onFloorArrival(newFloor int, doorTimer *time.Timer, immobilityTimer *time.Timer) {
@@ -139,6 +145,7 @@ func Fsm_onDoorTimeout(timer *time.Timer) {
 	ElevatorPrint(elevator)
 }
 
-func Fsm_updateQueue(updatedElevator Elevator) {
+func Fsm_updateLocalRequests(updatedElevator Elevator) {
 	elevator.Requests = updatedElevator.Requests
+	SetAllLights(elevator)
 }
