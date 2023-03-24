@@ -7,7 +7,7 @@ import (
 
 type OrderMessageStruct struct {
 	SystemID   string
-	MessageID  string
+	MessageID  int
 	ElevatorID string
 
 	//orderCounter int
@@ -46,7 +46,7 @@ func MakeFloorMessage(floor int) FloorArrivalMessageStruct {
 
 func MakeOrderMessage(panelPair OrderpanelPair, button elevio.ButtonEvent) OrderMessageStruct {
 	orderMsg := OrderMessageStruct{SystemID: "Gruppe10",
-		MessageID:     "Order",
+		MessageID:     0,
 		ElevatorID:    MyID,
 		OrderedButton: button,
 		PanelPair:     panelPair,
@@ -67,4 +67,8 @@ func SendIAmAlive(aliveTx chan IAmAliveMessageStruct) {
 		aliveTx <- aliveMsg
 
 	}
+}
+
+func SetIDOfMessage(cabOrder OrderMessageStruct, ID int){
+	
 }

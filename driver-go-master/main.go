@@ -251,6 +251,7 @@ func main() {
 					fmt.Println("Ready to send the following CABs:", cabsToBeSent)
 					for k := 0; k < len(cabsToBeSent); k++ {
 						cabsChannelTx <- cabsToBeSent[k]
+						time.Sleep(time.Duration(inputPollRateMs) * time.Millisecond)
 					}
 					//OBS! Kanskje vi må lage en egen kanal for dette?
 				}
@@ -259,6 +260,7 @@ func main() {
 				if database.NumElevators > 1 {
 					elevator.SetIAmAlone(false)
 				}
+
 			}
 
 			//for i := 0; i < len(p.New); i++ {

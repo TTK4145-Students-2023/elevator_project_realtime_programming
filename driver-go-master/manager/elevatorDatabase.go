@@ -165,6 +165,16 @@ func SendCabCallsForElevator(database ElevatorDatabase, newPeer string) []elevat
 }
 
 //ny meldinger oppdtaeres i databasen, og heisen henter inn fra databasen hvor den skal kjøre
+/*
+func SearchMessageCabUpdates(aliveMessage elevator.IAmAliveMessageStruct, database ElevatorDatabase) []elevator.OrderMessageStruct{
+	var newCabOrders []elevator.OrderMessageStruct
+	var button = elevio.BT_Cab
+	for floor := 0; floor < elevator.NumFloors; floor++ {
+		if aliveMessage[]
+
+	}
+}
+*/
 
 func SearchMessageOrderUpdate(aliveMessage elevator.IAmAliveMessageStruct, database ElevatorDatabase) []elevator.OrderMessageStruct {
 
@@ -176,7 +186,6 @@ func SearchMessageOrderUpdate(aliveMessage elevator.IAmAliveMessageStruct, datab
 
 	for floor := 0; floor < elevator.NumFloors; floor++ {
 		for button := elevio.BT_HallUp; button < elevio.BT_Cab; button++ {
-
 			if aliveMessage.Elevator.Requests[floor][button].OrderState != localElevator.Requests[floor][button].OrderState ||
 				aliveMessage.Elevator.Requests[floor][button].ElevatorID != localElevator.Requests[floor][button].ElevatorID {
 
@@ -238,9 +247,10 @@ func SearchMessageOrderUpdate(aliveMessage elevator.IAmAliveMessageStruct, datab
 						fmt.Println("...men det var jeg som eide denne orderen, så jeg bare chiller til den andre heisen har skjønt greia.")
 					}
 				}
-				time.Sleep(25 * time.Millisecond)
 			}
+			time.Sleep(25 * time.Millisecond)
 		}
+
 	}
 
 	return newChangedOrders
