@@ -46,8 +46,8 @@ func main() {
 	go peers.Transmitter(15600, id, peerTxEnable) //15647
 	go peers.Receiver(15600, peerUpdateCh)
 
-	orderTx := make(chan elevator.OrderMessageStruct)
-	orderRx := make(chan elevator.OrderMessageStruct)
+	cabsChannelTx := make(chan elevator.OrderMessageStruct)
+	cabsChannelRx := make(chan elevator.OrderMessageStruct)
 
 	floorArrivalTx := make(chan elevator.FloorArrivalMessageStruct)
 	floorArrivalRx := make(chan elevator.FloorArrivalMessageStruct)
@@ -58,8 +58,8 @@ func main() {
 	//ackTx := make(chan manager.AckMessage) Disse kanalene for å sende acks
 	//ackRx := make(chan manager.AckMessage)
 
-	go bcast.Transmitter(16569, orderTx, aliveTx, floorArrivalTx)
-	go bcast.Receiver(16569, orderRx, aliveRx, floorArrivalRx)
+	go bcast.Transmitter(16569, cabsChannelTx, aliveTx, floorArrivalTx)
+	go bcast.Receiver(16569, cabsChannelRx, aliveRx, floorArrivalRx)
 
 	//port: 16569
 
@@ -180,6 +180,18 @@ func main() {
 				//elevator.Fsm_updateLocalRequests(elevatorFromSearch)
 			}
 
+		case newCabs := <-cabsChannelRx:
+			var newUpdate elevator.Elevator
+			fmt.Println("I got a message update from cabs")
+			if newCabs.PanelPair.ElevatorID == elevator.MyID {
+				fmt.Println("I got a cab update and it is for me so I will go through the orders")
+				newUpdate = elevator.Fsm_onRequestButtonPress(newCabs.OrderedButton.Floor, newCabs.OrderedButton.Button, elevator.MyID, doorTimer, immobilityTimer)
+			} else {
+				fmt.Println("I got a cab updtae but it is not for me so i will just break")
+				break
+			}
+			database = manager.UpdateDatabase(newUpdate, database)
+
 		case p := <-peerUpdateCh:
 			fmt.Printf("Peer update:\n")
 			fmt.Printf("  Peers:    %q\n", p.Peers)
@@ -237,6 +249,9 @@ func main() {
 				if !elevator.GetIAmAlone() {
 					cabsToBeSent := manager.SendCabCallsForElevator(database, p.New)
 					fmt.Println("Ready to send the following CABs:", cabsToBeSent)
+					for k := 0; k < len(cabsToBeSent); k++ {
+						cabsChannelTx <- cabsToBeSent[k]
+					}
 					//OBS! Kanskje vi må lage en egen kanal for dette?
 				}
 

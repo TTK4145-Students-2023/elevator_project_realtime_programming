@@ -143,10 +143,10 @@ func GetElevatorFromID(database ElevatorDatabase, elevatorID string) elevator.El
 	orderTx <- orderMsg
 }*/
 
-func SendCabCallsForElevator(database ElevatorDatabase, newPeer string) []elevio.ButtonEvent {
-	var cabsToBeSent []elevio.ButtonEvent
+func SendCabCallsForElevator(database ElevatorDatabase, newPeer string) []elevator.OrderMessageStruct {
+	var cabsToBeSent []elevator.OrderMessageStruct
 	for i := 0; i < len(database.ElevatorsInNetwork); i++ {
-		if database.ElevatorsInNetwork[i].ElevatorID == newPeer {
+		if database.ElevatorsInNetwork[i].ElevatorID == newPeer && newPeer != elevator.MyID {
 			fmt.Println("her har den matchende id som den som kom tilbake")
 			for floor := 0; floor < elevator.NumFloors; floor++ {
 				if database.ElevatorsInNetwork[i].Requests[floor][elevio.BT_Cab].ElevatorID == newPeer {
@@ -154,7 +154,9 @@ func SendCabCallsForElevator(database ElevatorDatabase, newPeer string) []elevio
 					button.Floor = floor
 					button.Button = elevio.BT_Cab
 					fmt.Println("Cab call to be sent:", button)
-					cabsToBeSent = append(cabsToBeSent, button)
+					panelPair := elevator.OrderpanelPair{ElevatorID: newPeer, OrderState: elevator.SO_Confirmed}
+					//cabsChannelTx <- elevator.MakeOrderMessage(panelPair, button)
+					cabsToBeSent = append(cabsToBeSent, elevator.MakeOrderMessage(panelPair, button))
 				}
 			}
 		}
