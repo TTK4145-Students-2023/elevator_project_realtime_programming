@@ -7,13 +7,13 @@ import (
 
 type OrderMessageStruct struct {
 	SystemID   string
-	MessageID  string
+	MessageID  int
 	ElevatorID string
 
 	//orderCounter int
-	OrderedButton  elevio.ButtonEvent
-	ChosenElevator string
-	MyElevator     Elevator
+	OrderedButton elevio.ButtonEvent
+	PanelPair     OrderpanelPair
+	MyElevator    Elevator
 }
 
 type FloorArrivalMessageStruct struct {
@@ -44,13 +44,13 @@ func MakeFloorMessage(floor int) FloorArrivalMessageStruct {
 	return floorMsg
 }
 
-func MakeOrderMessage(chosenElevator string, button elevio.ButtonEvent) OrderMessageStruct {
+func MakeOrderMessage(panelPair OrderpanelPair, button elevio.ButtonEvent) OrderMessageStruct {
 	orderMsg := OrderMessageStruct{SystemID: "Gruppe10",
-		MessageID:      "Order",
-		ElevatorID:     MyID,
-		OrderedButton:  button,
-		ChosenElevator: chosenElevator,
-		MyElevator:     elevator}
+		MessageID:     0,
+		ElevatorID:    MyID,
+		OrderedButton: button,
+		PanelPair:     panelPair,
+		MyElevator:    elevator}
 
 	return orderMsg
 }
@@ -62,9 +62,13 @@ func SendIAmAlive(aliveTx chan IAmAliveMessageStruct) {
 		ElevatorID: MyID,
 		Elevator:   elevator}
 	for {
-		time.Sleep(250 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		aliveMsg.Elevator = elevator //oppdaterer heismelding
 		aliveTx <- aliveMsg
 
 	}
+}
+
+func SetIDOfMessage(cabOrder OrderMessageStruct, ID int){
+	
 }
