@@ -9,7 +9,7 @@ import (
 )
 
 type ElevatorDatabase struct {
-	NumElevators       int
+	ConnectedElevators int
 	ElevatorsInNetwork []elevator.Elevator
 }
 
@@ -20,14 +20,14 @@ func AssignOrderToElevator(database ElevatorDatabase, order elevio.ButtonEvent) 
 
 	connectedElevators := database.ElevatorsInNetwork
 	fmt.Println("The number of elevators that we have data on in the database is: ", len(connectedElevators))
-	fmt.Println("And the number of connected elevators is: ", database.NumElevators)
+	fmt.Println("And the number of connected elevators is: ", database.ConnectedElevators)
 
 	if order.Button == elevio.BT_Cab || elevator.GetIAmAlone() {
 		elevatorID = elevator.MyID
 	} else if elevator.AvailableAtCurrFloor(order.Floor) {
 		elevatorID = elevator.MyID
 	} else {
-		for i := 0; i < database.NumElevators; i++ {
+		for i := 0; i < database.ConnectedElevators; i++ {
 
 			c := calculateCost(&connectedElevators[i], order)                            //OBS! Blanding av pekere og ikke pekere
 			if c < lowCost && connectedElevators[i].Operating == elevator.WS_Connected { //Sjekker at calgt heis ikke er unconnected
@@ -43,36 +43,25 @@ func AssignOrderToElevator(database ElevatorDatabase, order elevio.ButtonEvent) 
 
 func FindDeadOrders(database ElevatorDatabase, deadElevatorID string) []elevio.ButtonEvent {
 	deadElev := GetElevatorFromID(database, deadElevatorID)
-	fmt.Println(" -----dead elevator id -----")
-	fmt.Println(deadElev.ElevatorID)
-	fmt.Println("here are the orders")
-
-	var ordersToBeReassigned []elevio.ButtonEvent
+	var deadOrders []elevio.ButtonEvent
 
 	for floor := 0; floor < elevator.NumFloors; floor++ {
 		for button := elevio.BT_HallUp; button < elevio.BT_Cab; button++ {
 			var order elevio.ButtonEvent
 			order.Button = elevio.ButtonType(button)
 			order.Floor = floor
-			fmt.Println(deadElev.Requests[floor][button])
 
 			if deadElev.Requests[floor][button].ElevatorID == deadElevatorID {
-				//newChosenElevator := AssignOrderToElevator(database, order)
-
-				fmt.Println("--------------FOUND DEADORDER--------------------------")
-				ordersToBeReassigned = append(ordersToBeReassigned, order)
-				//SendOrderMessage(orderTx, order, database)
+				deadOrders = append(deadOrders, order)
 			}
 		}
 
 	}
-	fmt.Println("I am now going to reassign these orders:", ordersToBeReassigned)
-
-	return ordersToBeReassigned
+	return deadOrders
 }
 
 func IsElevatorInDatabase(elevatorID string, database ElevatorDatabase) bool {
-	for i := 0; i < database.NumElevators; i++ {
+	for i := 0; i < database.ConnectedElevators; i++ {
 		if database.ElevatorsInNetwork[i].ElevatorID == elevatorID { //Sjekker at calgt heis ikke er unconnected
 			return true
 		}
@@ -85,7 +74,7 @@ func UpdateDatabase(elevatorToBeUpdated elevator.Elevator, database ElevatorData
 		elevatorToBeUpdated.Operating = elevator.WS_Connected //OBS! Nå håndterer vi running-state som connected
 	}
 
-	for i := 0; i < database.NumElevators; i++ {
+	for i := 0; i < database.ConnectedElevators; i++ {
 		if database.ElevatorsInNetwork[i].ElevatorID == elevatorToBeUpdated.ElevatorID {
 			database.ElevatorsInNetwork[i] = elevatorToBeUpdated
 		}
@@ -94,7 +83,7 @@ func UpdateDatabase(elevatorToBeUpdated elevator.Elevator, database ElevatorData
 }
 
 func WhatFloorIsElevatorFromStringID(database ElevatorDatabase, elevatorID string) int {
-	for i := 0; i < database.NumElevators; i++ {
+	for i := 0; i < database.ConnectedElevators; i++ {
 		if database.ElevatorsInNetwork[i].ElevatorID == elevatorID {
 			return database.ElevatorsInNetwork[i].Floor
 		}
@@ -103,7 +92,7 @@ func WhatFloorIsElevatorFromStringID(database ElevatorDatabase, elevatorID strin
 }
 
 func WhatStateIsElevatorFromStringID(database ElevatorDatabase, elevatorID string) elevator.ElevatorBehaviour {
-	for i := 0; i < database.NumElevators; i++ {
+	for i := 0; i < database.ConnectedElevators; i++ {
 		if database.ElevatorsInNetwork[i].ElevatorID == elevatorID {
 			return database.ElevatorsInNetwork[i].Behaviour
 		}
@@ -115,6 +104,11 @@ func UpdateElevatorNetworkStateInDatabase(elevatorID string, database ElevatorDa
 	for i := 0; i < len(database.ElevatorsInNetwork); i++ {
 		if elevatorID == database.ElevatorsInNetwork[i].ElevatorID {
 			database.ElevatorsInNetwork[i].Operating = newState
+			if newState == elevator.WS_Unconnected {
+				database.ConnectedElevators--
+			} else if newState == elevator.WS_Connected {
+				database.ConnectedElevators++
+			}
 		}
 
 	}
@@ -123,7 +117,7 @@ func UpdateElevatorNetworkStateInDatabase(elevatorID string, database ElevatorDa
 
 func GetElevatorFromID(database ElevatorDatabase, elevatorID string) elevator.Elevator {
 	var e elevator.Elevator
-	for i := 0; i < database.NumElevators; i++ {
+	for i := 0; i < database.ConnectedElevators; i++ {
 		if database.ElevatorsInNetwork[i].ElevatorID == elevatorID {
 			return database.ElevatorsInNetwork[i]
 		}
@@ -147,15 +141,12 @@ func SendCabCallsForElevator(database ElevatorDatabase, newPeer string) []elevat
 	var cabsToBeSent []elevator.OrderMessageStruct
 	for i := 0; i < len(database.ElevatorsInNetwork); i++ {
 		if database.ElevatorsInNetwork[i].ElevatorID == newPeer && newPeer != elevator.MyID {
-			fmt.Println("her har den matchende id som den som kom tilbake")
 			for floor := 0; floor < elevator.NumFloors; floor++ {
 				if database.ElevatorsInNetwork[i].Requests[floor][elevio.BT_Cab].ElevatorID == newPeer {
 					var button elevio.ButtonEvent
 					button.Floor = floor
 					button.Button = elevio.BT_Cab
-					fmt.Println("Cab call to be sent:", button)
 					panelPair := elevator.OrderpanelPair{ElevatorID: newPeer, OrderState: elevator.SO_Confirmed}
-					//cabsChannelTx <- elevator.MakeOrderMessage(panelPair, button)
 					cabsToBeSent = append(cabsToBeSent, elevator.MakeOrderMessage(panelPair, button))
 				}
 			}

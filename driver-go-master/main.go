@@ -67,7 +67,7 @@ func main() {
 
 	database := manager.ElevatorDatabase{
 		//hardkodede verdier vi alltid bruker når vi flagger
-		NumElevators: 0,
+		ConnectedElevators: 0,
 	}
 
 	doorTimer := time.NewTimer(3 * time.Second)
@@ -107,24 +107,14 @@ func main() {
 
 		select {
 		case floor := <-drv_floors:
-			//immobilityTimer.Stop()
-			//fmt.Println("Stoppet immobility timer on floorArrival")
-			//elevator.SetWorkingState(elevator.WS_Connected)
-			var newUpdate elevator.Elevator
-			newUpdate = elevator.Fsm_onFloorArrival(floor, doorTimer, immobilityTimer)
-			database = manager.UpdateDatabase(newUpdate, database)
+			var newElevatorUpdate elevator.Elevator
+			newElevatorUpdate = elevator.Fsm_onFloorArrival(floor, doorTimer, immobilityTimer)
+			database = manager.UpdateDatabase(newElevatorUpdate, database)
 
 		case button := <-drv_buttons:
-			var newUpdate elevator.Elevator
 			chosenElevator := manager.AssignOrderToElevator(database, button)
-
-			if chosenElevator == elevator.MyID { // || orderBroadcast.OrderedButton.Button != elevio.BT_Cab {
-				newUpdate = elevator.Fsm_onRequestButtonPress(button.Floor, button.Button, chosenElevator, doorTimer, immobilityTimer) //En toer vil bli satt
-			} else {
-				newUpdate = elevator.Fsm_setLocalNewOrder(button, chosenElevator)
-			}
-
-			database = manager.UpdateDatabase(newUpdate, database)
+			newElevatorUpdate := elevator.HandleNewOrder(chosenElevator, button, doorTimer, immobilityTimer)
+			database = manager.UpdateDatabase(newElevatorUpdate, database)
 
 		case obstruction := <-drv_obstr:
 			if elevator.IsDoorOpen() && obstruction {
@@ -142,11 +132,16 @@ func main() {
 			elevator.Fsm_onDoorTimeout(doorTimer)
 
 		case <-immobilityTimer.C:
-			//skal redestribute ordre
-			elevator.SetWorkingState(elevator.WS_Immobile)
-			database = manager.UpdateElevatorNetworkStateInDatabase(elevator.MyID, database, elevator.WS_Immobile)
-			manager.FindDeadOrders(database, elevator.MyID)
 			fmt.Println("Iam immobile", elevator.MyID)
+			database = manager.UpdateElevatorNetworkStateInDatabase(elevator.MyID, database, elevator.WS_Immobile)
+
+			var deadOrders []elevio.ButtonEvent
+			deadOrders = manager.FindDeadOrders(database, elevator.MyID)
+			for j := 0; j < len(deadOrders); j++ {
+				chosenElevator := manager.AssignOrderToElevator(database, deadOrders[j])
+				newElevatorUpdate := elevator.HandleNewOrder(chosenElevator, deadOrders[j], doorTimer, immobilityTimer)
+				database = manager.UpdateDatabase(newElevatorUpdate, database)
+			}
 
 		case aliveMessage := <-aliveRx:
 			if aliveMessage.ElevatorID != elevator.MyID {
@@ -156,41 +151,35 @@ func main() {
 
 				for i := 0; i < len(newChangedOrders); i++ {
 					newOrder := newChangedOrders[i]
-					var newUpdate elevator.Elevator
+					var newElevatorUpdate elevator.Elevator
 
 					if newOrder.PanelPair.OrderState == elevator.SO_Confirmed {
-						fmt.Println("Jeg har nå fått bekreftet denne orderen: Floor ", newOrder.OrderedButton.Floor, " - Button ",
-							newOrder.OrderedButton.Button, " - chosenElevator ", newOrder.PanelPair.ElevatorID)
-						if newOrder.PanelPair.ElevatorID == elevator.MyID {
-							fmt.Println("...og den skulle jeg ta selv, så nå kjører jeg Fsm_onReqButPress")
-							newUpdate = elevator.Fsm_onRequestButtonPress(newOrder.OrderedButton.Floor, newOrder.OrderedButton.Button, newOrder.PanelPair.ElevatorID, doorTimer, immobilityTimer)
-						} else {
-							fmt.Println("...men den skulle tas av noen andre, så jeg setter bare en localConfirmedOrder.")
-							newUpdate = elevator.Fsm_setLocalConfirmedOrder(newOrder.OrderedButton, newOrder.PanelPair.ElevatorID)
-						}
+						chosenElevator := newOrder.PanelPair.ElevatorID
+						newButton := newOrder.OrderedButton
+
+						newElevatorUpdate = elevator.HandleConfirmedOrder(chosenElevator, newButton, doorTimer, immobilityTimer)
+
 					} else if newOrder.PanelPair.OrderState == elevator.SO_NoOrder {
-						fmt.Println("Jeg har nå fått beskjed om å cleare denne orderen: Floor ", newOrder.OrderedButton.Floor, " - Button ",
-							newOrder.OrderedButton.Button, " - chosenElevator ", newOrder.PanelPair.ElevatorID)
-						newUpdate = elevator.Requests_clearOnFloor(newOrder.PanelPair.ElevatorID, newOrder.OrderedButton.Floor)
+
+						newElevatorUpdate = elevator.Requests_clearOnFloor(newOrder.PanelPair.ElevatorID, newOrder.OrderedButton.Floor)
 					}
 
-					database = manager.UpdateDatabase(newUpdate, database)
+					database = manager.UpdateDatabase(newElevatorUpdate, database)
 				}
-				//database = manager.UpdateDatabase(elevatorFromSearch, database)
-				//elevator.Fsm_updateLocalRequests(elevatorFromSearch)
+
 			}
 
 		case newCabs := <-cabsChannelRx:
-			var newUpdate elevator.Elevator
+			var newElevatorUpdate elevator.Elevator
 			fmt.Println("I got a message update from cabs")
 			if newCabs.PanelPair.ElevatorID == elevator.MyID {
 				fmt.Println("I got a cab update and it is for me so I will go through the orders")
-				newUpdate = elevator.Fsm_onRequestButtonPress(newCabs.OrderedButton.Floor, newCabs.OrderedButton.Button, elevator.MyID, doorTimer, immobilityTimer)
+				newElevatorUpdate = elevator.Fsm_onRequestButtonPress(newCabs.OrderedButton.Floor, newCabs.OrderedButton.Button, elevator.MyID, doorTimer, immobilityTimer)
 			} else {
 				fmt.Println("I got a cab updtae but it is not for me so i will just break")
 				break
 			}
-			database = manager.UpdateDatabase(newUpdate, database)
+			database = manager.UpdateDatabase(newElevatorUpdate, database)
 
 		case p := <-peerUpdateCh:
 			fmt.Printf("Peer update:\n")
@@ -200,50 +189,28 @@ func main() {
 
 			//legg dette inn i updatenetwork state
 			if len(p.Lost) != 0 {
-				var ordersToBeReassigned []elevio.ButtonEvent
+				var deadOrders []elevio.ButtonEvent
 
 				for i := 0; i < len(p.Lost); i++ {
 					database = manager.UpdateElevatorNetworkStateInDatabase(p.Lost[i], database, elevator.WS_Unconnected)
-
-					ordersToBeReassigned = manager.FindDeadOrders(database, p.Lost[i])
-					database.NumElevators--
-
-					if database.NumElevators <= 1 {
+					if database.ConnectedElevators <= 1 {
 						elevator.SetIAmAlone(true)
 					}
+
+					deadOrders = manager.FindDeadOrders(database, p.Lost[i])
+
 				}
 
-
-				for j := 0; j < len(ordersToBeReassigned); j++ {
-					//newUpdate := elevator.Requests_clearOnFloor(p.Lost[i], ordersToBeReassigned[j].Floor) //OBS! Denne fjerner vel lys i etasjen, men kanskje det settes umerkbart fort igjen?
-					//database = manager.UpdateDatabase(newUpdate, database)
-
-					button := ordersToBeReassigned[j] //prøvde her å skrive direkte til drv_buttons, men da oppstod det en lock
-					var newUpdate elevator.Elevator
-					chosenElevator := manager.AssignOrderToElevator(database, button)
-					fmt.Println("The chosen elevator for the reassignment is: ")
-					if chosenElevator == elevator.MyID { // || orderBroadcast.OrderedButton.Button != elevio.BT_Cab {
-						newUpdate = elevator.Fsm_onRequestButtonPress(button.Floor, button.Button, chosenElevator, doorTimer, immobilityTimer) //En toer vil bli satt
-					} else {
-						newUpdate = elevator.Fsm_setLocalNewOrder(button, chosenElevator)
-					}
-
-					database = manager.UpdateDatabase(newUpdate, database)
+				for j := 0; j < len(deadOrders); j++ {
+					chosenElevator := manager.AssignOrderToElevator(database, deadOrders[j])
+					newElevatorUpdate := elevator.HandleNewOrder(chosenElevator, deadOrders[j], doorTimer, immobilityTimer)
+					database = manager.UpdateDatabase(newElevatorUpdate, database)
 				}
 
 			}
 
 			if p.New != "" {
-				if !manager.IsElevatorInDatabase(p.New, database) {
-					database.ElevatorsInNetwork = append(database.ElevatorsInNetwork, elevator.Elevator{ElevatorID: p.New, Operating: elevator.WS_Connected})
-				}
-
-				for i := 0; i < len(database.ElevatorsInNetwork); i++ {
-					if database.ElevatorsInNetwork[i].ElevatorID == p.New {
-						database.ElevatorsInNetwork[i].Operating = elevator.WS_Connected
-					}
-				}
-
+				
 				if !elevator.GetIAmAlone() {
 					cabsToBeSent := manager.SendCabCallsForElevator(database, p.New)
 					fmt.Println("Ready to send the following CABs:", cabsToBeSent)
@@ -251,11 +218,14 @@ func main() {
 						cabsChannelTx <- cabsToBeSent[k]
 						time.Sleep(time.Duration(inputPollRateMs) * time.Millisecond)
 					}
-					//OBS! Kanskje vi må lage en egen kanal for dette?
 				}
 
-				database.NumElevators++
-				if database.NumElevators > 1 {
+				if !manager.IsElevatorInDatabase(p.New, database) {
+					database.ElevatorsInNetwork = append(database.ElevatorsInNetwork, elevator.Elevator{ElevatorID: p.New, Operating: elevator.WS_Connected})
+				}
+
+				database = manager.UpdateElevatorNetworkStateInDatabase(p.New, database, elevator.WS_Connected)
+				if database.ConnectedElevators > 1 {
 					elevator.SetIAmAlone(false)
 				}
 
