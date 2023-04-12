@@ -29,12 +29,14 @@ func AssignOrderToElevator(database ElevatorDatabase, order elevio.ButtonEvent) 
 	} else {
 		for i := 0; i < database.ConnectedElevators; i++ {
 
-			c := calculateCost(&connectedElevators[i], order)                            //OBS! Blanding av pekere og ikke pekere
-			if c < lowCost && connectedElevators[i].Operating == elevator.WS_Connected { //Sjekker at calgt heis ikke er unconnected
+			c := calculateCost(connectedElevators[i], order)
+			if c < lowCost && connectedElevators[i].Operating == elevator.WS_Connected {
 				lowCost = c
 				elevatorID = connectedElevators[i].ElevatorID
 			}
+
 		}
+
 	}
 
 	fmt.Println("Assigned order to:", elevatorID)
@@ -125,18 +127,6 @@ func GetElevatorFromID(database ElevatorDatabase, elevatorID string) elevator.El
 	return e
 }
 
-/*func SendOrderMessage(orderTx chan elevator.OrderMessageStruct, button elevio.ButtonEvent, database ElevatorDatabase) {
-	chosenElevator := AssignOrderToElevator(database, button)
-
-	orderMsg := elevator.OrderMessageStruct{SystemID: "Gruppe10",
-		MessageID:      "Order",
-		ElevatorID:     elevator.MyID,
-		OrderedButton:  button,
-		ChosenElevator: chosenElevator}
-
-	orderTx <- orderMsg
-}*/
-
 func SendCabCallsForElevator(database ElevatorDatabase, newPeer string) []elevator.OrderMessageStruct {
 	var cabsToBeSent []elevator.OrderMessageStruct
 	for i := 0; i < len(database.ElevatorsInNetwork); i++ {
@@ -154,18 +144,6 @@ func SendCabCallsForElevator(database ElevatorDatabase, newPeer string) []elevat
 	}
 	return cabsToBeSent
 }
-
-//ny meldinger oppdtaeres i databasen, og heisen henter inn fra databasen hvor den skal kjøre
-/*
-func SearchMessageCabUpdates(aliveMessage elevator.IAmAliveMessageStruct, database ElevatorDatabase) []elevator.OrderMessageStruct{
-	var newCabOrders []elevator.OrderMessageStruct
-	var button = elevio.BT_Cab
-	for floor := 0; floor < elevator.NumFloors; floor++ {
-		if aliveMessage[]
-
-	}
-}
-*/
 
 func SearchMessageOrderUpdate(aliveMessage elevator.IAmAliveMessageStruct, database ElevatorDatabase) []elevator.OrderMessageStruct {
 
