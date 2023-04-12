@@ -247,8 +247,9 @@ func SearchMessageOrderUpdate(aliveMessage elevator.IAmAliveMessageStruct, datab
 						fmt.Println("...men det var jeg som eide denne orderen, så jeg bare chiller til den andre heisen har skjønt greia.")
 					}
 				}
+				time.Sleep(25 * time.Millisecond)
 			}
-			time.Sleep(25 * time.Millisecond)
+
 		}
 
 	}
