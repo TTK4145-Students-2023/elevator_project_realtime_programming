@@ -41,7 +41,7 @@ func AssignOrderToElevator(database ElevatorDatabase, order elevio.ButtonEvent) 
 	return elevatorID
 }
 
-func ReassignDeadOrders(database ElevatorDatabase, deadElevatorID string) []elevio.ButtonEvent {
+func FindDeadOrders(database ElevatorDatabase, deadElevatorID string) []elevio.ButtonEvent {
 	deadElev := GetElevatorFromID(database, deadElevatorID)
 	fmt.Println(" -----dead elevator id -----")
 	fmt.Println(deadElev.ElevatorID)

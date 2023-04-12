@@ -145,7 +145,7 @@ func main() {
 			//skal redestribute ordre
 			elevator.SetWorkingState(elevator.WS_Immobile)
 			database = manager.UpdateElevatorNetworkStateInDatabase(elevator.MyID, database, elevator.WS_Immobile)
-			manager.ReassignDeadOrders(database, elevator.MyID)
+			manager.FindDeadOrders(database, elevator.MyID)
 			fmt.Println("Iam immobile", elevator.MyID)
 
 		case aliveMessage := <-aliveRx:
@@ -201,21 +201,19 @@ func main() {
 			//legg dette inn i updatenetwork state
 			if len(p.Lost) != 0 {
 				var ordersToBeReassigned []elevio.ButtonEvent
+
 				for i := 0; i < len(p.Lost); i++ {
-					fmt.Println("Lost elevator requests: ", manager.GetElevatorFromID(database, p.Lost[i]).Requests)
-					manager.UpdateElevatorNetworkStateInDatabase(p.Lost[i], database, elevator.WS_Unconnected)
-					fmt.Println("This is the database: ")
-					for i := 0; i < len(database.ElevatorsInNetwork); i++ {
-						elevator.ElevatorPrint(database.ElevatorsInNetwork[i])
-					}
-					ordersToBeReassigned = manager.ReassignDeadOrders(database, p.Lost[i])
+					database = manager.UpdateElevatorNetworkStateInDatabase(p.Lost[i], database, elevator.WS_Unconnected)
+
+					ordersToBeReassigned = manager.FindDeadOrders(database, p.Lost[i])
 					database.NumElevators--
 
 					if database.NumElevators <= 1 {
 						elevator.SetIAmAlone(true)
-						fmt.Println("I am alone", elevator.GetIAmAlone())
 					}
 				}
+
+
 				for j := 0; j < len(ordersToBeReassigned); j++ {
 					//newUpdate := elevator.Requests_clearOnFloor(p.Lost[i], ordersToBeReassigned[j].Floor) //OBS! Denne fjerner vel lys i etasjen, men kanskje det settes umerkbart fort igjen?
 					//database = manager.UpdateDatabase(newUpdate, database)
