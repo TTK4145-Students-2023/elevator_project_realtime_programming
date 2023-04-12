@@ -172,78 +172,57 @@ func SearchMessageOrderUpdate(aliveMessage elevator.IAmAliveMessageStruct, datab
 	var newChangedOrders []elevator.OrderMessageStruct
 
 	localElevator := GetElevatorFromID(database, elevator.MyID)
-	//fmt.Println("This is the staus of the elevator in the database:")
-	//elevator.ElevatorPrint(localElevator)
 
 	for floor := 0; floor < elevator.NumFloors; floor++ {
 		for button := elevio.BT_HallUp; button < elevio.BT_Cab; button++ {
-			if aliveMessage.Elevator.Requests[floor][button].OrderState != localElevator.Requests[floor][button].OrderState ||
-				aliveMessage.Elevator.Requests[floor][button].ElevatorID != localElevator.Requests[floor][button].ElevatorID {
 
-				fmt.Println("Jeg har funnet en forskjell!\nMottatt array: ", aliveMessage.Elevator.Requests)
-				fmt.Println("Mitt lokale array: ", localElevator.Requests)
-				fmt.Println("Er det en forskjell i ID-en på hvem orderen er fordelt til? Svar:",
-					aliveMessage.Elevator.Requests[floor][button].ElevatorID != localElevator.Requests[floor][button].ElevatorID)
-				//OBS! Kan oppstå forskjellige IDer ved reassignment
-				//switch aliveMessage.Elevator.Requests[floor][button].OrderState {
-				//case elevator.SO_NoOrder:
-				if aliveMessage.Elevator.Requests[floor][button].OrderState == elevator.SO_NoOrder {
-					fmt.Println("Jeg har funnet en endring til SO_NoOrder")
-					if localElevator.Requests[floor][button].ElevatorID == aliveMessage.ElevatorID &&
-						localElevator.Requests[floor][button].OrderState == elevator.SO_Confirmed {
-						fmt.Println("... og det kom fra den som eide orderen, så nå sletter jeg den")
-						//localElevator = elevator.Requests_clearOnFloor(aliveMessage.ElevatorID, floor)
+			currentButtonEvent := elevio.ButtonEvent{Floor: floor, Button: button}
+
+			receivedOrderState := aliveMessage.Elevator.Requests[floor][button].OrderState
+			localOrderState := localElevator.Requests[floor][button].OrderState
+
+			receivedRequestID := aliveMessage.Elevator.Requests[floor][button].ElevatorID
+			localRequestID := localElevator.Requests[floor][button].ElevatorID
+
+			if receivedOrderState != localOrderState ||
+				receivedRequestID != localRequestID {
+
+				if receivedOrderState == elevator.SO_NoOrder {
+
+					if localRequestID == aliveMessage.ElevatorID &&
+						localOrderState == elevator.SO_Confirmed {
+
 						panelPair := elevator.OrderpanelPair{ElevatorID: aliveMessage.ElevatorID, OrderState: elevator.SO_NoOrder}
-						newChangedOrders = append(newChangedOrders, elevator.MakeOrderMessage(panelPair, elevio.ButtonEvent{Floor: floor, Button: button}))
+						newChangedOrders = append(newChangedOrders, elevator.MakeOrderMessage(panelPair, currentButtonEvent))
 
-						localElevator.Requests[floor][button].OrderState = elevator.SO_NoOrder
-						localElevator.Requests[floor][button].ElevatorID = ""
-						//Vi må legge noe append her sånn at det oppdateres utenfor scopet også
-					} else if localElevator.Requests[floor][button].ElevatorID == aliveMessage.ElevatorID &&
-						localElevator.Requests[floor][button].OrderState == elevator.SO_NewOrder {
+					} else if localRequestID == aliveMessage.ElevatorID &&
+						localOrderState == elevator.SO_NewOrder {
+
 						panelPair := elevator.OrderpanelPair{ElevatorID: aliveMessage.ElevatorID, OrderState: elevator.SO_NoOrder}
-						newChangedOrders = append(newChangedOrders, elevator.MakeOrderMessage(panelPair, elevio.ButtonEvent{Floor: floor, Button: button}))
+						newChangedOrders = append(newChangedOrders, elevator.MakeOrderMessage(panelPair, currentButtonEvent))
 
-						localElevator.Requests[floor][button].OrderState = elevator.SO_NoOrder
-						localElevator.Requests[floor][button].ElevatorID = ""
 					}
-					//Kanal til Requests_clearOnFloor()?
-				} else if aliveMessage.Elevator.Requests[floor][button].OrderState == elevator.SO_NewOrder {
-					fmt.Println("Jeg har funnet en endring til SO_NewOrder")
-					if aliveMessage.Elevator.Requests[floor][button].ElevatorID == localElevator.ElevatorID {
-						fmt.Println("...og orderen var fordelt til meg, så nå bekrefter jeg den")
-						localElevator.Requests[floor][button].OrderState = elevator.SO_Confirmed
-						localElevator.Requests[floor][button].ElevatorID = localElevator.ElevatorID
+				} else if receivedOrderState == elevator.SO_NewOrder {
 
+					if receivedRequestID == localElevator.ElevatorID {
 						panelPair := elevator.OrderpanelPair{ElevatorID: localElevator.ElevatorID, OrderState: elevator.SO_Confirmed}
-						newChangedOrders = append(newChangedOrders, elevator.MakeOrderMessage(panelPair, elevio.ButtonEvent{Floor: floor, Button: button}))
+						newChangedOrders = append(newChangedOrders, elevator.MakeOrderMessage(panelPair, currentButtonEvent))
 
-						//confirmedOrderChan <- elevator.MakeOrderMessage(localElevator.ElevatorID, elevio.ButtonEvent{Floor: floor, Button: button})
-					} else if aliveMessage.Elevator.Requests[floor][button].ElevatorID != localElevator.ElevatorID {
-						fmt.Println("...men orderen var ikke til meg, så jeg bekrefter den ikke")
-						localElevator.Requests[floor][button] = aliveMessage.Elevator.Requests[floor][button]
-					}
-				} else if aliveMessage.Elevator.Requests[floor][button].OrderState == elevator.SO_Confirmed {
-					fmt.Println("Jeg har funnet en endring til SO_Confirmed")
-					if aliveMessage.Elevator.Requests[floor][button].ElevatorID == aliveMessage.ElevatorID {
-						fmt.Println("...og det er en bekreftelse fra den som eide orderen, så nå bekrefter jeg den også.")
-						localElevator.Requests[floor][button].OrderState = elevator.SO_Confirmed
-
-						panelPair := elevator.OrderpanelPair{ElevatorID: aliveMessage.ElevatorID, OrderState: elevator.SO_Confirmed}
-						newChangedOrders = append(newChangedOrders, elevator.MakeOrderMessage(panelPair, elevio.ButtonEvent{Floor: floor, Button: button}))
-
-						//localElevator.Requests[floor][button].ElevatorID = aliveMessage.ElevatorID
-						//Kanal til Fsm_onRequestButtonPress()?
 					} else {
-						fmt.Println("...men det var jeg som eide denne orderen, så jeg bare chiller til den andre heisen har skjønt greia.")
+						panelPair := elevator.OrderpanelPair{ElevatorID: aliveMessage.ElevatorID, OrderState: elevator.SO_NewOrder}
+						newChangedOrders = append(newChangedOrders, elevator.MakeOrderMessage(panelPair, currentButtonEvent))
+					}
+				} else if receivedOrderState == elevator.SO_Confirmed {
+
+					if receivedRequestID == aliveMessage.ElevatorID {
+						panelPair := elevator.OrderpanelPair{ElevatorID: aliveMessage.ElevatorID, OrderState: elevator.SO_Confirmed}
+						newChangedOrders = append(newChangedOrders, elevator.MakeOrderMessage(panelPair, currentButtonEvent))
+
 					}
 				}
 				time.Sleep(25 * time.Millisecond)
 			}
-
 		}
-
 	}
-
 	return newChangedOrders
 }
