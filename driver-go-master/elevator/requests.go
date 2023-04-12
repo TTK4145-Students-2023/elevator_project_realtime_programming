@@ -142,13 +142,13 @@ func Requests_clearOnFloor(arrivedElevatorID string, floor int) Elevator {
 	//så er det jo en ordre der.
 	//OBS! Må sjekke state til heis fordi det kan skje at den ikke skal cleare. Litt mer kopi av Req_clearAtCurrFloor(). Eks: hente ut state fra database
 
-	if elevator.Requests[floor][elevio.BT_HallDown].OrderState == SO_Confirmed &&
+	if elevator.Requests[floor][elevio.BT_HallDown].OrderState != SO_NoOrder &&
 		(arrivedElevatorID == elevator.Requests[floor][elevio.BT_HallDown].ElevatorID) {
 		elevator.Requests[floor][elevio.BT_HallDown].OrderState = SO_NoOrder
 		elevator.Requests[floor][elevio.BT_HallDown].ElevatorID = ""
 		fmt.Println("Her clearer jeg bestillingen på floor", floor, ", som var fordelt til", arrivedElevatorID)
 		elevio.SetButtonLamp(elevio.BT_HallDown, floor, false) // La til denne men vet ikke hvorfor denne må være her siden setAlllights egentlig skal cleare lyset nederst
-	} else if elevator.Requests[floor][elevio.BT_HallUp].OrderState == SO_Confirmed &&
+	} else if elevator.Requests[floor][elevio.BT_HallUp].OrderState != SO_NoOrder &&
 		(arrivedElevatorID == elevator.Requests[floor][elevio.BT_HallUp].ElevatorID) {
 		elevator.Requests[floor][elevio.BT_HallUp].OrderState = SO_NoOrder
 		elevator.Requests[floor][elevio.BT_HallUp].ElevatorID = ""
