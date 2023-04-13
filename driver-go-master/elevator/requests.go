@@ -142,6 +142,8 @@ func Requests_clearOnFloor(arrivedElevatorID string, floor int) Elevator {
 	//så er det jo en ordre der.
 	//OBS! Må sjekke state til heis fordi det kan skje at den ikke skal cleare. Litt mer kopi av Req_clearAtCurrFloor(). Eks: hente ut state fra database
 
+	fmt.Println("Nå er jeg inne i funksjonen req clear on floor, før jeg har gjort selve jobben")
+
 	if elevator.Requests[floor][elevio.BT_HallDown].OrderState != SO_NoOrder &&
 		(arrivedElevatorID == elevator.Requests[floor][elevio.BT_HallDown].ElevatorID) {
 		elevator.Requests[floor][elevio.BT_HallDown].OrderState = SO_NoOrder

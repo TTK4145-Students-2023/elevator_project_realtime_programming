@@ -109,6 +109,7 @@ func main() {
 		case floor := <-drv_floors:
 			var newElevatorUpdate elevator.Elevator
 			newElevatorUpdate = elevator.Fsm_onFloorArrival(floor, doorTimer, immobilityTimer)
+			fmt.Println("Her oppdaterer jeg databasen med en slettet ordre")
 			database = manager.UpdateDatabase(newElevatorUpdate, database)
 
 		case button := <-drv_buttons:
@@ -160,7 +161,7 @@ func main() {
 						newElevatorUpdate = elevator.HandleConfirmedOrder(chosenElevator, newButton, doorTimer, immobilityTimer)
 
 					} else if newOrder.PanelPair.OrderState == elevator.SO_NoOrder {
-
+						fmt.Println("Inne no order ifen")
 						newElevatorUpdate = elevator.Requests_clearOnFloor(newOrder.PanelPair.ElevatorID, newOrder.OrderedButton.Floor)
 					}
 
@@ -199,9 +200,13 @@ func main() {
 
 					deadOrders = manager.FindDeadOrders(database, p.Lost[i])
 
+					fmt.Println("her sjekker vi om den tapte heisen får riktig operating state")
+					elevator.ElevatorPrint(manager.GetElevatorFromID(database, p.Lost[i]))
+
 				}
 
 				for j := 0; j < len(deadOrders); j++ {
+
 					chosenElevator := manager.AssignOrderToElevator(database, deadOrders[j])
 					newElevatorUpdate := elevator.HandleNewOrder(chosenElevator, deadOrders[j], doorTimer, immobilityTimer)
 					database = manager.UpdateDatabase(newElevatorUpdate, database)
@@ -210,7 +215,7 @@ func main() {
 			}
 
 			if p.New != "" {
-				
+
 				if !elevator.GetIAmAlone() {
 					cabsToBeSent := manager.SendCabCallsForElevator(database, p.New)
 					fmt.Println("Ready to send the following CABs:", cabsToBeSent)
