@@ -19,7 +19,7 @@ const (
 func calculateCost(e elevator.Elevator, order elevio.ButtonEvent) float64 {
 	// Determine current location of elevator and direction
 	currFloor := e.Floor
-	currDir := e.Dirn
+	currDir := e.Direction
 
 	// Calculate distance to requested floor
 	distance := math.Abs(float64(currFloor - order.Floor))

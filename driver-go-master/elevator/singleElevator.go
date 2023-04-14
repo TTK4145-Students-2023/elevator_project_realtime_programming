@@ -9,18 +9,6 @@ const MyID = "15657"
 
 var elevator = Elevator_uninitialized(MyID)
 
-func SetAllLights(es Elevator) {
-	for floor := 0; floor < NumFloors; floor++ {
-		for btn := elevio.BT_HallUp; btn < NumButtons; btn++ {
-			if es.Requests[floor][btn].OrderState == SO_Confirmed {
-				elevio.SetButtonLamp(btn, floor, true)
-			} else {
-				elevio.SetButtonLamp(btn, floor, false)
-			}
-		}
-	}
-}
-
 func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType, chosenElevator string, doorTimer *time.Timer, immobilityTimer *time.Timer) Elevator {
 
 	switch elevator.Behaviour {
@@ -30,21 +18,17 @@ func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType, chosenEle
 			elevator = Requests_clearOnFloor(elevator.ElevatorID, elevator.Floor)
 			doorTimer.Reset(3 * time.Second)
 		} else {
-			elevator.Requests[btnFloor][btnType].OrderState = SO_Confirmed
-			elevator.Requests[btnFloor][btnType].ElevatorID = chosenElevator
+			elevator = setConfirmedOrder(elevator, btnFloor, btnType, chosenElevator)
 		}
 	case EB_Moving:
 		immobilityTimer.Reset(3 * time.Second)
-
-		elevator.Requests[btnFloor][btnType].OrderState = SO_Confirmed
-		elevator.Requests[btnFloor][btnType].ElevatorID = chosenElevator
+		elevator = setConfirmedOrder(elevator, btnFloor, btnType, chosenElevator)
 
 	case EB_Idle:
-		elevator.Requests[btnFloor][btnType].OrderState = SO_Confirmed
-		elevator.Requests[btnFloor][btnType].ElevatorID = chosenElevator
+		elevator = setConfirmedOrder(elevator, btnFloor, btnType, chosenElevator)
 
 		directionBehaviourPair := Requests_chooseDirection(elevator)
-		elevator.Dirn = directionBehaviourPair.dirn
+		elevator.Direction = directionBehaviourPair.direction
 		elevator.Behaviour = directionBehaviourPair.behaviour
 
 		switch directionBehaviourPair.behaviour {
@@ -55,7 +39,7 @@ func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType, chosenEle
 
 		case EB_Moving:
 			immobilityTimer.Reset(3 * time.Second)
-			elevio.SetMotorDirection(elevator.Dirn)
+			elevio.SetMotorDirection(elevator.Direction)
 
 		case EB_Idle:
 		}
@@ -96,7 +80,7 @@ func Fsm_onDoorTimeout(timer *time.Timer) {
 	switch elevator.Behaviour {
 	case EB_DoorOpen:
 		pair := Requests_chooseDirection(elevator)
-		elevator.Dirn = pair.dirn
+		elevator.Direction = pair.direction
 		elevator.Behaviour = pair.behaviour
 
 		switch elevator.Behaviour {
@@ -106,7 +90,7 @@ func Fsm_onDoorTimeout(timer *time.Timer) {
 			SetAllLights(elevator)
 		case EB_Moving, EB_Idle:
 			elevio.SetDoorOpenLamp(false)
-			elevio.SetMotorDirection(elevator.Dirn)
+			elevio.SetMotorDirection(elevator.Direction)
 		}
 	default:
 		break

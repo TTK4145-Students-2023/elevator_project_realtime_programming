@@ -32,6 +32,11 @@ const (
 	SO_Confirmed
 )
 
+type DirectionBehaviourPair struct {
+	direction elevio.MotorDirection
+	behaviour ElevatorBehaviour
+}
+
 type OrderpanelPair struct {
 	OrderState StateOfOrder
 	ElevatorID string
@@ -40,7 +45,7 @@ type OrderpanelPair struct {
 type Elevator struct {
 	Floor          int
 	ElevatorID     string
-	Dirn           elevio.MotorDirection
+	Direction      elevio.MotorDirection
 	Requests       [NumFloors][NumButtons]OrderpanelPair
 	Behaviour      ElevatorBehaviour
 	DoorOpen       bool

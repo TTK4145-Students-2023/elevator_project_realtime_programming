@@ -18,7 +18,7 @@ func ebToString(eb ElevatorBehaviour) string {
 	}
 }
 
-func DirnToString(direction elevio.MotorDirection) string {
+func DirectionToString(direction elevio.MotorDirection) string {
 	switch direction {
 	case elevio.MD_Up:
 		return "MotorUp"
@@ -35,7 +35,7 @@ func ElevatorPrint(es Elevator) {
 	fmt.Println("  +--------------------+")
 	fmt.Printf("  |ID = %-2d         |\n", es.ElevatorID)
 	fmt.Printf("  |floor = %-2d         |\n", es.Floor)
-	fmt.Printf("  |dirn  = %-12.12s|\n", DirnToString(es.Dirn))
+	fmt.Printf("  |Direction  = %-12.12s|\n", DirectionToString(es.Direction))
 	fmt.Printf("  |behav = %-12.12s|\n", ebToString(es.Behaviour))
 	fmt.Printf("  |door = %-2d          |\n", es.DoorOpen)
 	fmt.Printf("  |operating = %-2d        |\n", es.Operating)

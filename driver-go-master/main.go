@@ -43,6 +43,7 @@ func main() {
 	// We can disable/enable the transmitter after it has been started.
 	// This could be used to signal that we are somehow "unavailable".
 	peerTxEnable := make(chan bool)
+
 	go peers.Transmitter(15600, id, peerTxEnable) //15647
 	go peers.Receiver(15600, peerUpdateCh)
 
@@ -52,18 +53,14 @@ func main() {
 	stateUpdateTx := make(chan elevator.StateUpdateStruct)
 	stateUpdateRx := make(chan elevator.StateUpdateStruct)
 
-	//ackTx := make(chan manager.AckMessage) Disse kanalene for å sende acks
-	//ackRx := make(chan manager.AckMessage)
 
 	go bcast.Transmitter(16569, cabsChannelTx, stateUpdateTx)
 	go bcast.Receiver(16569, cabsChannelRx, stateUpdateRx)
-
 	//port: 16569
 
 	fmt.Println("Started!")
 
 	database := manager.ElevatorDatabase{
-		//hardkodede verdier vi alltid bruker når vi flagger
 		ConnectedElevators: 0,
 	}
 
@@ -87,7 +84,6 @@ func main() {
 	go elevio.PollObstructionSwitch(drv_obstr)
 	go elevio.PollStopButton(drv_stop)
 
-	//input := elevioGetInputDevice()
 
 	if elevio.GetFloor() == -1 {
 		elevator.Fsm_onInitBetweenFloors()
@@ -95,9 +91,7 @@ func main() {
 
 	go elevator.SendStateUpdate(stateUpdateTx)
 
-	//prev := [nFloors][nButtons]int{}
-
-	//lage en for select hvor drv_button sender istedet for request buttons
+	
 	for {
 
 		select {
@@ -185,40 +179,22 @@ func main() {
 			database = manager.UpdateDatabase(newElevatorUpdate, database)
 
 		case p := <-peerUpdateCh:
-			fmt.Printf("Peer update:\n")
-			fmt.Printf("  Peers:    %q\n", p.Peers)
-			fmt.Printf("  New:      %q\n", p.New)
-			fmt.Printf("  Lost:     %q\n", p.Lost)
+			
 
-			//legg dette inn i updatenetwork state
 			if len(p.Lost) != 0 {
 				var deadOrders []elevio.ButtonEvent
-
 				for i := 0; i < len(p.Lost); i++ {
 					database = manager.UpdateElevatorNetworkStateInDatabase(p.Lost[i], database, elevator.WS_Unconnected)
 					if database.ConnectedElevators <= 1 {
 						elevator.SetIAmAlone(true)
 					}
-					fmt.Println("her sjekker vi hvilken info vi har på den tapte heisen")
 					elevator.ElevatorPrint(manager.GetElevatorFromID(database, p.Lost[i]))
 					deadOrders = manager.FindDeadOrders(database, p.Lost[i])
-					fmt.Println("Døde ordre: ", deadOrders)
-					fmt.Println("her sjekker vi om den tapte heisen får riktig operating state")
 					elevator.ElevatorPrint(manager.GetElevatorFromID(database, p.Lost[i]))
 
 				}
 
-				//finne laveste id
-				/*var lowestID = elevator.MyID
-				for i := 0; i < len(database.ElevatorList); i++ {
-					var temp = database.ElevatorList[i].ElevatorID
-					if temp < lowestID && database.ElevatorList[i].Operating == elevator.WS_Connected {
-						lowestID = temp
-					}
-				}*/
-
 				for j := 0; j < len(deadOrders); j++ {
-
 					chosenElevator := manager.AssignOrderToElevator(database, deadOrders[j])
 					newElevatorUpdate := elevator.HandleNewOrder(chosenElevator, deadOrders[j], doorTimer, immobilityTimer)
 					database = manager.UpdateDatabase(newElevatorUpdate, database)
@@ -227,7 +203,6 @@ func main() {
 			}
 
 			if p.New != "" {
-
 				if !elevator.GetIAmAlone() {
 					cabsToBeSent := manager.FindCabCallsForElevator(database, p.New)
 					fmt.Println("Ready to send the following CABs:", cabsToBeSent)
@@ -247,9 +222,6 @@ func main() {
 				}
 
 			}
-
-			//for i := 0; i < len(p.New); i++ {
-			// 	reload orders
 
 		}
 
