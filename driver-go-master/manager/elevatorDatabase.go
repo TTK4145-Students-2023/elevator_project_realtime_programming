@@ -35,6 +35,7 @@ func AssignOrderToElevator(database ElevatorDatabase, order elevio.ButtonEvent) 
 				lowestCostElevator = connectedElevators[i].ElevatorID
 			} else if c == lowCost && connectedElevators[i].Operating == elevator.WS_Connected {
 				if lowestCostElevator > connectedElevators[i].ElevatorID {
+					lowCost = c
 					lowestCostElevator = connectedElevators[i].ElevatorID
 				}
 			}
@@ -76,10 +77,10 @@ func IsElevatorInDatabase(elevatorID string, database ElevatorDatabase) bool {
 }
 
 func UpdateDatabase(elevatorToBeUpdated elevator.Elevator, database ElevatorDatabase) ElevatorDatabase {
-	if elevatorToBeUpdated.Operating != elevator.WS_Immobile {
+	/*if elevatorToBeUpdated.Operating != elevator.WS_Immobile {
 		elevatorToBeUpdated.Operating = elevator.WS_Connected
 		fmt.Println("Her setter jeg operating staten til ", elevatorToBeUpdated.ElevatorID, " til ", elevatorToBeUpdated.Operating) //OBS! Nå håndterer vi running-state som connected
-	}
+	}*/
 
 	for i := 0; i < database.ConnectedElevators; i++ {
 		if database.ElevatorsInNetwork[i].ElevatorID == elevatorToBeUpdated.ElevatorID {

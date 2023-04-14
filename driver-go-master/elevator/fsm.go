@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-const MyID = "15657"
+const MyID = "17000"
 
 var elevator = Elevator_uninitialized(MyID)
 

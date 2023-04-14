@@ -205,11 +205,24 @@ func main() {
 
 				}
 
-				for j := 0; j < len(deadOrders); j++ {
+				//finne laveste id
+				var lowestID = elevator.MyID
+				for i := 0; i < len(database.ElevatorsInNetwork); i++ {
+					var temp = database.ElevatorsInNetwork[i].ElevatorID
+					if temp < lowestID && database.ElevatorsInNetwork[i].Operating == elevator.WS_Connected {
+						lowestID = temp
+					}
+				}
 
-					chosenElevator := manager.AssignOrderToElevator(database, deadOrders[j])
-					newElevatorUpdate := elevator.HandleNewOrder(chosenElevator, deadOrders[j], doorTimer, immobilityTimer)
-					database = manager.UpdateDatabase(newElevatorUpdate, database)
+				fmt.Println("laveste id som er valgt til å reassigne er", lowestID)
+
+				if elevator.MyID == lowestID {
+					for j := 0; j < len(deadOrders); j++ {
+
+						chosenElevator := manager.AssignOrderToElevator(database, deadOrders[j])
+						newElevatorUpdate := elevator.HandleNewOrder(chosenElevator, deadOrders[j], doorTimer, immobilityTimer)
+						database = manager.UpdateDatabase(newElevatorUpdate, database)
+					}
 				}
 
 			}
