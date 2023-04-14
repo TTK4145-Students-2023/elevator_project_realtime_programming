@@ -46,20 +46,17 @@ func main() {
 	go peers.Transmitter(15600, id, peerTxEnable) //15647
 	go peers.Receiver(15600, peerUpdateCh)
 
-	cabsChannelTx := make(chan elevator.OrderMessageStruct)
-	cabsChannelRx := make(chan elevator.OrderMessageStruct)
+	cabsChannelTx := make(chan elevator.OrderStruct)
+	cabsChannelRx := make(chan elevator.OrderStruct)
 
-	floorArrivalTx := make(chan elevator.FloorArrivalMessageStruct)
-	floorArrivalRx := make(chan elevator.FloorArrivalMessageStruct)
-
-	aliveTx := make(chan elevator.IAmAliveMessageStruct)
-	aliveRx := make(chan elevator.IAmAliveMessageStruct)
+	stateUpdateTx := make(chan elevator.StateUpdateStruct)
+	stateUpdateRx := make(chan elevator.StateUpdateStruct)
 
 	//ackTx := make(chan manager.AckMessage) Disse kanalene for å sende acks
 	//ackRx := make(chan manager.AckMessage)
 
-	go bcast.Transmitter(16569, cabsChannelTx, aliveTx, floorArrivalTx)
-	go bcast.Receiver(16569, cabsChannelRx, aliveRx, floorArrivalRx)
+	go bcast.Transmitter(16569, cabsChannelTx, stateUpdateTx)
+	go bcast.Receiver(16569, cabsChannelRx, stateUpdateRx)
 
 	//port: 16569
 
@@ -90,15 +87,13 @@ func main() {
 	go elevio.PollObstructionSwitch(drv_obstr)
 	go elevio.PollStopButton(drv_stop)
 
-	//go manager.AliveMessageReceiver(aliveRx, database, newOrder, confirmedOrderChan)
-
 	//input := elevioGetInputDevice()
 
 	if elevio.GetFloor() == -1 {
 		elevator.Fsm_onInitBetweenFloors()
 	}
 
-	go elevator.SendIAmAlive(aliveTx)
+	go elevator.SendStateUpdate(stateUpdateTx)
 
 	//prev := [nFloors][nButtons]int{}
 
@@ -151,11 +146,11 @@ func main() {
 				database = manager.UpdateDatabase(newElevatorUpdate, database)
 			}
 
-		case aliveMessage := <-aliveRx:
+		case aliveMessage := <-stateUpdateRx:
 			if aliveMessage.ElevatorID != elevator.MyID {
 				database = manager.UpdateDatabase(aliveMessage.Elevator, database)
 
-				newChangedOrders := manager.SearchMessageOrderUpdate(aliveMessage, database)
+				newChangedOrders := manager.SearchMessageForOrderUpdate(aliveMessage, database)
 
 				for i := 0; i < len(newChangedOrders); i++ {
 					newOrder := newChangedOrders[i]
@@ -234,7 +229,7 @@ func main() {
 			if p.New != "" {
 
 				if !elevator.GetIAmAlone() {
-					cabsToBeSent := manager.SendCabCallsForElevator(database, p.New)
+					cabsToBeSent := manager.FindCabCallsForElevator(database, p.New)
 					fmt.Println("Ready to send the following CABs:", cabsToBeSent)
 					for k := 0; k < len(cabsToBeSent); k++ {
 						cabsChannelTx <- cabsToBeSent[k]

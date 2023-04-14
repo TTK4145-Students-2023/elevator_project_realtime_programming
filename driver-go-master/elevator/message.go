@@ -5,70 +5,33 @@ import (
 	"time"
 )
 
-type OrderMessageStruct struct {
-	SystemID   string
-	MessageID  int
-	ElevatorID string
-
-	//orderCounter int
+type OrderStruct struct {
+	ElevatorID    string
 	OrderedButton elevio.ButtonEvent
 	PanelPair     OrderpanelPair
-	MyElevator    Elevator
 }
 
-type FloorArrivalMessageStruct struct {
-	SystemID   string
-	MessageID  string
+type StateUpdateStruct struct {
 	ElevatorID string
-
-	//orderCounter int
-	ArrivedFloor int
-	MyElevator   Elevator
+	Elevator   Elevator
 }
 
-type IAmAliveMessageStruct struct {
-	SystemID   string
-	MessageID  string
-	ElevatorID string
-
-	Elevator Elevator
-}
-
-func MakeFloorMessage(floor int) FloorArrivalMessageStruct {
-	floorMsg := FloorArrivalMessageStruct{SystemID: "Gruppe10",
-		MessageID:    "Floor",
-		ElevatorID:   MyID,
-		ArrivedFloor: floor,
-		MyElevator:   elevator}
-
-	return floorMsg
-}
-
-func MakeOrderMessage(panelPair OrderpanelPair, button elevio.ButtonEvent) OrderMessageStruct {
-	orderMsg := OrderMessageStruct{SystemID: "Gruppe10",
-		MessageID:     0,
+func MakeOrder(panelPair OrderpanelPair, button elevio.ButtonEvent) OrderStruct {
+	order := OrderStruct{
 		ElevatorID:    MyID,
 		OrderedButton: button,
-		PanelPair:     panelPair,
-		MyElevator:    elevator}
+		PanelPair:     panelPair}
 
-	return orderMsg
+	return order
 }
 
-// The example message. We just send one of these every second.
-func SendIAmAlive(aliveTx chan IAmAliveMessageStruct) {
-	aliveMsg := IAmAliveMessageStruct{SystemID: "Gruppe10",
-		MessageID:  "Alive",
+func SendStateUpdate(aliveTx chan StateUpdateStruct) {
+	aliveMsg := StateUpdateStruct{
 		ElevatorID: MyID,
 		Elevator:   elevator}
 	for {
 		time.Sleep(200 * time.Millisecond)
 		aliveMsg.Elevator = elevator //oppdaterer heismelding
 		aliveTx <- aliveMsg
-
 	}
-}
-
-func SetIDOfMessage(cabOrder OrderMessageStruct, ID int) {
-
 }

@@ -18,7 +18,6 @@ const (
 
 func calculateCost(e elevator.Elevator, order elevio.ButtonEvent) float64 {
 	// Determine current location of elevator and direction
-
 	currFloor := e.Floor
 	currDir := e.Dirn
 
@@ -47,8 +46,7 @@ func calculateCost(e elevator.Elevator, order elevio.ButtonEvent) float64 {
 	return cost
 }
 
-// Helper function to calculate direction to travel inudp
-
+// Helper function to calculate direction to travel
 func getDirection(fromFloor, toFloor int) elevio.MotorDirection {
 	if fromFloor < toFloor {
 		return elevio.MD_Up

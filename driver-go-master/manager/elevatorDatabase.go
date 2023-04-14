@@ -13,27 +13,6 @@ type ElevatorDatabase struct {
 	ElevatorList       []elevator.Elevator
 }
 
-
-
-func FindDeadOrders(database ElevatorDatabase, deadElevatorID string) []elevio.ButtonEvent {
-	deadElev := GetElevatorFromID(database, deadElevatorID)
-	var deadOrders []elevio.ButtonEvent
-
-	for floor := 0; floor < elevator.NumFloors; floor++ {
-		for button := elevio.BT_HallUp; button < elevio.BT_Cab; button++ {
-			var order elevio.ButtonEvent
-			order.Button = elevio.ButtonType(button)
-			order.Floor = floor
-
-			if deadElev.Requests[floor][button].ElevatorID == deadElevatorID {
-				deadOrders = append(deadOrders, order)
-			}
-		}
-
-	}
-	return deadOrders
-}
-
 func UpdateDatabase(elevatorToBeUpdated elevator.Elevator, database ElevatorDatabase) ElevatorDatabase {
 	/*if elevatorToBeUpdated.Operating != elevator.WS_Immobile {
 		elevatorToBeUpdated.Operating = elevator.WS_Connected
@@ -46,24 +25,6 @@ func UpdateDatabase(elevatorToBeUpdated elevator.Elevator, database ElevatorData
 		}
 	}
 	return database
-}
-
-func WhatFloorIsElevatorFromStringID(database ElevatorDatabase, elevatorID string) int {
-	for i := 0; i < len(database.ElevatorList); i++ {
-		if database.ElevatorList[i].ElevatorID == elevatorID {
-			return database.ElevatorList[i].Floor
-		}
-	}
-	return -1
-}
-
-func WhatStateIsElevatorFromStringID(database ElevatorDatabase, elevatorID string) elevator.ElevatorBehaviour {
-	for i := 0; i < len(database.ElevatorList); i++ {
-		if database.ElevatorList[i].ElevatorID == elevatorID {
-			return database.ElevatorList[i].Behaviour
-		}
-	}
-	return elevator.EB_Undefined
 }
 
 func UpdateElevatorNetworkStateInDatabase(elevatorID string, database ElevatorDatabase, newState elevator.WorkingState) ElevatorDatabase {
@@ -83,37 +44,9 @@ func UpdateElevatorNetworkStateInDatabase(elevatorID string, database ElevatorDa
 	return database
 }
 
-func GetElevatorFromID(database ElevatorDatabase, elevatorID string) elevator.Elevator {
-	var e elevator.Elevator
-	for i := 0; i < len(database.ElevatorList); i++ {
-		if database.ElevatorList[i].ElevatorID == elevatorID {
-			return database.ElevatorList[i]
-		}
-	}
-	return e
-}
+func SearchMessageForOrderUpdate(aliveMessage elevator.StateUpdateStruct, database ElevatorDatabase) []elevator.OrderStruct {
 
-func SendCabCallsForElevator(database ElevatorDatabase, newPeer string) []elevator.OrderMessageStruct {
-	var cabsToBeSent []elevator.OrderMessageStruct
-	for i := 0; i < len(database.ElevatorList); i++ {
-		if database.ElevatorList[i].ElevatorID == newPeer && newPeer != elevator.MyID {
-			for floor := 0; floor < elevator.NumFloors; floor++ {
-				if database.ElevatorList[i].Requests[floor][elevio.BT_Cab].ElevatorID == newPeer {
-					var button elevio.ButtonEvent
-					button.Floor = floor
-					button.Button = elevio.BT_Cab
-					panelPair := elevator.OrderpanelPair{ElevatorID: newPeer, OrderState: elevator.SO_Confirmed}
-					cabsToBeSent = append(cabsToBeSent, elevator.MakeOrderMessage(panelPair, button))
-				}
-			}
-		}
-	}
-	return cabsToBeSent
-}
-
-func SearchMessageOrderUpdate(aliveMessage elevator.IAmAliveMessageStruct, database ElevatorDatabase) []elevator.OrderMessageStruct {
-
-	var newChangedOrders []elevator.OrderMessageStruct
+	var newChangedOrders []elevator.OrderStruct
 
 	localElevator := GetElevatorFromID(database, elevator.MyID)
 
@@ -142,14 +75,14 @@ func SearchMessageOrderUpdate(aliveMessage elevator.IAmAliveMessageStruct, datab
 						localOrderState == elevator.SO_Confirmed {
 
 						panelPair := elevator.OrderpanelPair{ElevatorID: aliveMessage.ElevatorID, OrderState: elevator.SO_NoOrder}
-						newChangedOrders = append(newChangedOrders, elevator.MakeOrderMessage(panelPair, currentButtonEvent))
+						newChangedOrders = append(newChangedOrders, elevator.MakeOrder(panelPair, currentButtonEvent))
 						fmt.Println("I found a no order so I will erase it")
 
 					} else if localRequestID == aliveMessage.ElevatorID &&
 						localOrderState == elevator.SO_NewOrder {
 
 						panelPair := elevator.OrderpanelPair{ElevatorID: aliveMessage.ElevatorID, OrderState: elevator.SO_NoOrder}
-						newChangedOrders = append(newChangedOrders, elevator.MakeOrderMessage(panelPair, currentButtonEvent))
+						newChangedOrders = append(newChangedOrders, elevator.MakeOrder(panelPair, currentButtonEvent))
 
 					}
 				} else if receivedOrderState == elevator.SO_NewOrder {
@@ -157,18 +90,18 @@ func SearchMessageOrderUpdate(aliveMessage elevator.IAmAliveMessageStruct, datab
 					if receivedRequestID == localElevator.ElevatorID {
 						fmt.Println("Her fikk jeg en new order og den var til meg så jeg setter den confirmed")
 						panelPair := elevator.OrderpanelPair{ElevatorID: localElevator.ElevatorID, OrderState: elevator.SO_Confirmed}
-						newChangedOrders = append(newChangedOrders, elevator.MakeOrderMessage(panelPair, currentButtonEvent))
+						newChangedOrders = append(newChangedOrders, elevator.MakeOrder(panelPair, currentButtonEvent))
 
 					} else {
 						panelPair := elevator.OrderpanelPair{ElevatorID: aliveMessage.ElevatorID, OrderState: elevator.SO_NewOrder}
-						newChangedOrders = append(newChangedOrders, elevator.MakeOrderMessage(panelPair, currentButtonEvent))
+						newChangedOrders = append(newChangedOrders, elevator.MakeOrder(panelPair, currentButtonEvent))
 					}
 				} else if receivedOrderState == elevator.SO_Confirmed {
 
 					if receivedRequestID == aliveMessage.ElevatorID {
 						fmt.Println("Her fikk jeg en confirmed order og den var fra eieren så jeg setter den confirmed")
 						panelPair := elevator.OrderpanelPair{ElevatorID: aliveMessage.ElevatorID, OrderState: elevator.SO_Confirmed}
-						newChangedOrders = append(newChangedOrders, elevator.MakeOrderMessage(panelPair, currentButtonEvent))
+						newChangedOrders = append(newChangedOrders, elevator.MakeOrder(panelPair, currentButtonEvent))
 
 					}
 				}

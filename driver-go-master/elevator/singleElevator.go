@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-const MyID = "15657"
+const MyID = "17000"
 
 var elevator = Elevator_uninitialized(MyID)
 
@@ -25,8 +25,6 @@ func SetAllLights(es Elevator) {
 			} else {
 				elevio.SetButtonLamp(btn, floor, false)
 			}
-			//elevio.SetButtonLamp(btn, floor, es.Requests[floor][btn].order)
-			//Vurderte individuell sjekk på cab, men fordi caben kun er intern i arrayet, så må det være denne heisens cab uansett
 		}
 	}
 }
@@ -38,17 +36,12 @@ func Fsm_onInitBetweenFloors() {
 }
 
 func Fsm_onRequestButtonPress(btnFloor int, btnType elevio.ButtonType, chosenElevator string, doorTimer *time.Timer, immobilityTimer *time.Timer) Elevator {
-	//fmt.Printf("\n\n%s(%d, %s)\n", "fsm_onRequestButtonPress", btnFloor, btnType.ToString())
-	ElevatorPrint(elevator)
-	//fmt.Println(calculateCost(&elevator, btnFloor))
-	fmt.Println("----inne i on req buttonpress------------")
-	//La til denne for å sikre at man ikke omfordeler en ordre dersom en knapp blir trykket på flere ganger
+
 	switch elevator.Behaviour {
 	case EB_DoorOpen:
 		if Requests_shouldClearImmediately(elevator, btnFloor, btnType) {
 			elevator = Requests_clearAtCurrentFloor(elevator)
 			doorTimer.Reset(3 * time.Second)
-			fmt.Println("Vi har inne i Fsm_onReqButPress fått beskjed om at vi shouldClearImmediately")
 			elevator = Requests_clearOnFloor(elevator.ElevatorID, elevator.Floor)
 		} else {
 			elevator.Requests[btnFloor][btnType].OrderState = SO_Confirmed
