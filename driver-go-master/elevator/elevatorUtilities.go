@@ -58,8 +58,10 @@ func IsDoorOpen() bool {
 func GetIAmAlone() bool {
 	return elevator.SingleElevator
 }
-func SetIAmAlone(alone bool) {
-	elevator.SingleElevator = alone
+func SetIAmAlone(alone bool, el Elevator) Elevator{
+	temp := Elevator{Single}
+	temp.SingleElevator = alone
+	return temp
 }
 
 func SetWorkingState(state WorkingState) {

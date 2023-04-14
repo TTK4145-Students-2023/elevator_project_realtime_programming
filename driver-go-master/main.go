@@ -7,6 +7,7 @@ import (
 	"Driver-go/network/bcast"
 	"Driver-go/network/localip"
 	"Driver-go/network/peers"
+	"Driver-go/paraply"
 	"flag"
 	"fmt"
 	"os"
@@ -180,48 +181,7 @@ func main() {
 
 		case p := <-peerUpdateCh:
 			
-
-			if len(p.Lost) != 0 {
-				var deadOrders []elevio.ButtonEvent
-				for i := 0; i < len(p.Lost); i++ {
-					database = manager.UpdateElevatorNetworkStateInDatabase(p.Lost[i], database, elevator.WS_Unconnected)
-					if database.ConnectedElevators <= 1 {
-						elevator.SetIAmAlone(true)
-					}
-					elevator.ElevatorPrint(manager.GetElevatorFromID(database, p.Lost[i]))
-					deadOrders = manager.FindDeadOrders(database, p.Lost[i])
-					elevator.ElevatorPrint(manager.GetElevatorFromID(database, p.Lost[i]))
-
-				}
-
-				for j := 0; j < len(deadOrders); j++ {
-					chosenElevator := manager.AssignOrderToElevator(database, deadOrders[j])
-					newElevatorUpdate := elevator.HandleNewOrder(chosenElevator, deadOrders[j], doorTimer, immobilityTimer)
-					database = manager.UpdateDatabase(newElevatorUpdate, database)
-				}
-
-			}
-
-			if p.New != "" {
-				if !elevator.GetIAmAlone() {
-					cabsToBeSent := manager.FindCabCallsForElevator(database, p.New)
-					fmt.Println("Ready to send the following CABs:", cabsToBeSent)
-					for k := 0; k < len(cabsToBeSent); k++ {
-						cabsChannelTx <- cabsToBeSent[k]
-						time.Sleep(time.Duration(inputPollRateMs) * time.Millisecond)
-					}
-				}
-
-				if !manager.IsElevatorInDatabase(p.New, database) {
-					database.ElevatorList = append(database.ElevatorList, elevator.Elevator{ElevatorID: p.New, Operating: elevator.WS_Connected})
-				}
-
-				database = manager.UpdateElevatorNetworkStateInDatabase(p.New, database, elevator.WS_Connected)
-				if database.ConnectedElevators > 1 {
-					elevator.SetIAmAlone(false)
-				}
-
-			}
+			database = paraply.ManagePeers(p, database, doorTimer, immobilityTimer, cabsChannelTx)
 
 		}
 

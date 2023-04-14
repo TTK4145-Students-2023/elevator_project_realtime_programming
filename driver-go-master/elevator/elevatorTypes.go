@@ -46,7 +46,7 @@ type Elevator struct {
 	Floor          int
 	ElevatorID     string
 	Direction      elevio.MotorDirection
-	Requests       [NumFloors][NumButtons]OrderpanelPair
+	Requests       [elevator.NumFloors][elevator.NumButtons]OrderpanelPair
 	Behaviour      ElevatorBehaviour
 	DoorOpen       bool
 	Operating      WorkingState
