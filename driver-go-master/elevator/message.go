@@ -62,13 +62,13 @@ func SendIAmAlive(aliveTx chan IAmAliveMessageStruct) {
 		ElevatorID: MyID,
 		Elevator:   elevator}
 	for {
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(200 * time.Millisecond)
 		aliveMsg.Elevator = elevator //oppdaterer heismelding
 		aliveTx <- aliveMsg
 
 	}
 }
 
-func SetIDOfMessage(cabOrder OrderMessageStruct, ID int){
-	
+func SetIDOfMessage(cabOrder OrderMessageStruct, ID int) {
+
 }

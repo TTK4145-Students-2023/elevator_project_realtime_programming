@@ -16,7 +16,7 @@ const (
 	waitingTimeRate     = 0.1
 )
 
-func calculateCost(e *elevator.Elevator, order elevio.ButtonEvent) float64 {
+func calculateCost(e elevator.Elevator, order elevio.ButtonEvent) float64 {
 	// Determine current location of elevator and direction
 
 	currFloor := e.Floor
@@ -27,19 +27,22 @@ func calculateCost(e *elevator.Elevator, order elevio.ButtonEvent) float64 {
 
 	// Calculate cost based on distance
 	cost := distance * ratePerUnitDistance
+	if e.Behaviour == elevator.EB_Idle {
+		return cost
 
-	// If elevator needs to change direction, add direction change cost
-	if currDir != elevio.MD_Stop && currDir != getDirection(currFloor, order.Floor) {
-		cost += directionChangeCost
+	} else {
+		if currDir != elevio.MD_Stop && currDir != getDirection(currFloor, order.Floor) {
+			cost += directionChangeCost
+		}
+
+		if (currDir == elevio.MD_Up && order.Button == elevio.BT_HallDown) ||
+			(currDir == elevio.MD_Down && order.Button == elevio.BT_HallUp) {
+			cost += buttonChangeCost
+		}
+
+		// Add any additional costs
+		cost += waitingTimeCost(e)
 	}
-
-	if (currDir == elevio.MD_Up && order.Button == elevio.BT_HallDown) ||
-		(currDir == elevio.MD_Down && order.Button == elevio.BT_HallUp) {
-		cost += buttonChangeCost
-	}
-
-	// Add any additional costs
-	cost += waitingTimeCost(e)
 
 	return cost
 }
@@ -56,8 +59,8 @@ func getDirection(fromFloor, toFloor int) elevio.MotorDirection {
 }
 
 // Helper function to calculate waiting time cost
-func waitingTimeCost(e *elevator.Elevator) float64 {
-	if e.Behaviour == elevator.EB_Idle || e.Behaviour == elevator.EB_DoorOpen {
+func waitingTimeCost(e elevator.Elevator) float64 {
+	if e.Behaviour == elevator.EB_DoorOpen {
 		return waitingTime * waitingTimeRate
 	}
 	return 0
