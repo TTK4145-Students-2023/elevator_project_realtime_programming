@@ -34,7 +34,8 @@ func AssignOrderToElevator(database ElevatorDatabase, order elevio.ButtonEvent) 
 				lowCost = c
 				lowestCostElevator = connectedElevators[i].ElevatorID
 			} else if c == lowCost && connectedElevators[i].Operating == elevator.WS_Connected {
-				if lowestCostElevator > connectedElevators[i].ElevatorID {
+				var temp = database.ElevatorsInNetwork[i].ElevatorID
+				if temp < lowestCostElevator { //Litt rart å sammenligne strings
 					lowCost = c
 					lowestCostElevator = connectedElevators[i].ElevatorID
 				}
@@ -127,7 +128,7 @@ func UpdateElevatorNetworkStateInDatabase(elevatorID string, database ElevatorDa
 
 func GetElevatorFromID(database ElevatorDatabase, elevatorID string) elevator.Elevator {
 	var e elevator.Elevator
-	for i := 0; i < database.ConnectedElevators; i++ {
+	for i := 0; i < len(database.ElevatorsInNetwork); i++ {
 		if database.ElevatorsInNetwork[i].ElevatorID == elevatorID {
 			return database.ElevatorsInNetwork[i]
 		}
@@ -170,9 +171,14 @@ func SearchMessageOrderUpdate(aliveMessage elevator.IAmAliveMessageStruct, datab
 			receivedRequestID := aliveMessage.Elevator.Requests[floor][button].ElevatorID
 			localRequestID := localElevator.Requests[floor][button].ElevatorID
 
-			if receivedOrderState != localOrderState ||
-				receivedRequestID != localRequestID {
+			if receivedOrderState != localOrderState { // || receivedRequestID != localRequestID {
 
+				/*changedOwner := receivedRequestID != localRequestID
+				fmt.Println("Endring i eier av ordre:", (receivedRequestID != localRequestID))
+				if changedOwner {
+					fmt.Println("Old owner:", localRequestID)
+					fmt.Println("New owner:", receivedRequestID)
+				}*/
 				if receivedOrderState == elevator.SO_NoOrder {
 
 					if localRequestID == aliveMessage.ElevatorID &&

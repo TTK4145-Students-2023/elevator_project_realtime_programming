@@ -128,6 +128,13 @@ func main() {
 				elevator.SetWorkingState(elevator.WS_Connected)
 				doorTimer.Reset(3 * time.Second)
 			}
+		case <-drv_stop:
+			fmt.Println("Jeg er heis, ", elevator.MyID, "her er min heis: ")
+			elevator.ElevatorPrint(elevator.GetSingleEleavtorStruct())
+			fmt.Println("..og her er databasen min: ")
+			for i := 0; i < len(database.ElevatorsInNetwork); i++ {
+				elevator.ElevatorPrint(database.ElevatorsInNetwork[i])
+			}
 
 		case <-doorTimer.C:
 			elevator.Fsm_onDoorTimeout(doorTimer)
@@ -197,33 +204,31 @@ func main() {
 					if database.ConnectedElevators <= 1 {
 						elevator.SetIAmAlone(true)
 					}
-
+					fmt.Println("her sjekker vi hvilken info vi har på den tapte heisen")
+					elevator.ElevatorPrint(manager.GetElevatorFromID(database, p.Lost[i]))
 					deadOrders = manager.FindDeadOrders(database, p.Lost[i])
-
+					fmt.Println("Døde ordre: ", deadOrders)
 					fmt.Println("her sjekker vi om den tapte heisen får riktig operating state")
 					elevator.ElevatorPrint(manager.GetElevatorFromID(database, p.Lost[i]))
 
 				}
 
 				//finne laveste id
-				var lowestID = elevator.MyID
+				/*var lowestID = elevator.MyID
 				for i := 0; i < len(database.ElevatorsInNetwork); i++ {
 					var temp = database.ElevatorsInNetwork[i].ElevatorID
 					if temp < lowestID && database.ElevatorsInNetwork[i].Operating == elevator.WS_Connected {
 						lowestID = temp
 					}
+				}*/
+
+				for j := 0; j < len(deadOrders); j++ {
+
+					chosenElevator := manager.AssignOrderToElevator(database, deadOrders[j])
+					newElevatorUpdate := elevator.HandleNewOrder(chosenElevator, deadOrders[j], doorTimer, immobilityTimer)
+					database = manager.UpdateDatabase(newElevatorUpdate, database)
 				}
 
-				fmt.Println("laveste id som er valgt til å reassigne er", lowestID)
-
-				if elevator.MyID == lowestID {
-					for j := 0; j < len(deadOrders); j++ {
-
-						chosenElevator := manager.AssignOrderToElevator(database, deadOrders[j])
-						newElevatorUpdate := elevator.HandleNewOrder(chosenElevator, deadOrders[j], doorTimer, immobilityTimer)
-						database = manager.UpdateDatabase(newElevatorUpdate, database)
-					}
-				}
 
 			}
 
