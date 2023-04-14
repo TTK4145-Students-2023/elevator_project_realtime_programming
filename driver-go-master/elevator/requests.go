@@ -2,7 +2,6 @@ package elevator
 
 import (
 	"Driver-go/elevio"
-	"fmt"
 )
 
 type DirnBehaviourPair struct {
@@ -108,7 +107,6 @@ func Requests_shouldClearImmediately(e Elevator, btn_floor int, btn_type elevio.
 }
 
 func Requests_clearAtCurrentFloor(e Elevator) Elevator {
-	//Tanken: Alle går på heisen som stopper, så ordre må cleares uansett fordeling
 	e.Requests[e.Floor][elevio.BT_Cab].OrderState = SO_NoOrder
 	e.Requests[e.Floor][elevio.BT_Cab].ElevatorID = ""
 	switch e.Dirn {
@@ -138,24 +136,16 @@ func Requests_clearAtCurrentFloor(e Elevator) Elevator {
 }
 
 func Requests_clearOnFloor(arrivedElevatorID string, floor int) Elevator {
-	//Trenger vel egt ikke å sjekke om det er en ordre her fordi hvis den er fordelt,
-	//så er det jo en ordre der.
-	//OBS! Må sjekke state til heis fordi det kan skje at den ikke skal cleare. Litt mer kopi av Req_clearAtCurrFloor(). Eks: hente ut state fra database
-
-	fmt.Println("Nå er jeg inne i funksjonen req clear on floor, før jeg har gjort selve jobben")
 
 	if elevator.Requests[floor][elevio.BT_HallDown].OrderState != SO_NoOrder &&
 		(arrivedElevatorID == elevator.Requests[floor][elevio.BT_HallDown].ElevatorID) {
 		elevator.Requests[floor][elevio.BT_HallDown].OrderState = SO_NoOrder
 		elevator.Requests[floor][elevio.BT_HallDown].ElevatorID = ""
-		fmt.Println("Her clearer jeg bestillingen på floor", floor, ", som var fordelt til", arrivedElevatorID)
-		elevio.SetButtonLamp(elevio.BT_HallDown, floor, false) // La til denne men vet ikke hvorfor denne må være her siden setAlllights egentlig skal cleare lyset nederst
+
 	} else if elevator.Requests[floor][elevio.BT_HallUp].OrderState != SO_NoOrder &&
 		(arrivedElevatorID == elevator.Requests[floor][elevio.BT_HallUp].ElevatorID) {
 		elevator.Requests[floor][elevio.BT_HallUp].OrderState = SO_NoOrder
 		elevator.Requests[floor][elevio.BT_HallUp].ElevatorID = ""
-		fmt.Println("Her clearer jeg bestillingen på floor", floor, ", som var fordelt til", arrivedElevatorID)
-		elevio.SetButtonLamp(elevio.BT_HallDown, floor, false) //HER OGSÅ
 	}
 
 	SetAllLights(elevator)

@@ -14,6 +14,19 @@ func Elevator_uninitialized(myID string) Elevator {
 	return elev
 }
 
+func Fsm_init() {
+	elevator = Elevator_uninitialized(MyID)
+
+	elevio.SetFloorIndicator(elevator.Floor)
+	SetAllLights(elevator)
+}
+
+func Fsm_onInitBetweenFloors() {
+	elevio.SetMotorDirection(elevio.MD_Down)
+	elevator.Dirn = elevio.MD_Down
+	elevator.Behaviour = EB_Moving
+}
+
 func GetSingleEleavtorStruct() Elevator {
 	return elevator
 }
