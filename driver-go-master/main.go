@@ -132,8 +132,8 @@ func main() {
 			fmt.Println("Jeg er heis, ", elevator.MyID, "her er min heis: ")
 			elevator.ElevatorPrint(elevator.GetSingleEleavtorStruct())
 			fmt.Println("..og her er databasen min: ")
-			for i := 0; i < len(database.ElevatorsInNetwork); i++ {
-				elevator.ElevatorPrint(database.ElevatorsInNetwork[i])
+			for i := 0; i < len(database.ElevatorList); i++ {
+				elevator.ElevatorPrint(database.ElevatorList[i])
 			}
 
 		case <-doorTimer.C:
@@ -215,9 +215,9 @@ func main() {
 
 				//finne laveste id
 				/*var lowestID = elevator.MyID
-				for i := 0; i < len(database.ElevatorsInNetwork); i++ {
-					var temp = database.ElevatorsInNetwork[i].ElevatorID
-					if temp < lowestID && database.ElevatorsInNetwork[i].Operating == elevator.WS_Connected {
+				for i := 0; i < len(database.ElevatorList); i++ {
+					var temp = database.ElevatorList[i].ElevatorID
+					if temp < lowestID && database.ElevatorList[i].Operating == elevator.WS_Connected {
 						lowestID = temp
 					}
 				}*/
@@ -228,7 +228,6 @@ func main() {
 					newElevatorUpdate := elevator.HandleNewOrder(chosenElevator, deadOrders[j], doorTimer, immobilityTimer)
 					database = manager.UpdateDatabase(newElevatorUpdate, database)
 				}
-
 
 			}
 
@@ -244,7 +243,7 @@ func main() {
 				}
 
 				if !manager.IsElevatorInDatabase(p.New, database) {
-					database.ElevatorsInNetwork = append(database.ElevatorsInNetwork, elevator.Elevator{ElevatorID: p.New, Operating: elevator.WS_Connected})
+					database.ElevatorList = append(database.ElevatorList, elevator.Elevator{ElevatorID: p.New, Operating: elevator.WS_Connected})
 				}
 
 				database = manager.UpdateElevatorNetworkStateInDatabase(p.New, database, elevator.WS_Connected)
