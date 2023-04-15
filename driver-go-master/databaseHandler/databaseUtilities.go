@@ -1,9 +1,8 @@
-package manager
+package databaseHandler
 
 import (
-	"Driver-go/elevio"
+	"Driver-go/elevatorHardware"
 	"Driver-go/singleElevator"
-	"time"
 )
 
 func IsElevatorInDatabase(elevatorID string, database ElevatorDatabase) bool {
@@ -23,14 +22,6 @@ func MessageIDEqualsMyID(messageUpdateID string) bool {
 	}
 }
 
-func shouldITakeTheOrder(order elevio.ButtonEvent) bool {
-	if order.Button == elevio.BT_Cab || singleElevator.GetIsAlone() || singleElevator.AvailableAtCurrFloor(order.Floor) {
-		return true
-	} else {
-		return false
-	}
-}
-
 func GetElevatorFromID(database ElevatorDatabase, elevatorID string) singleElevator.Elevator {
 	var e singleElevator.Elevator
 	for i := 0; i < len(database.ElevatorList); i++ {
@@ -41,9 +32,22 @@ func GetElevatorFromID(database ElevatorDatabase, elevatorID string) singleEleva
 	return e
 }
 
-func SendCabCalls(cabsToBeSent []OrderStruct, cabsChannelTx chan OrderStruct) {
-	for k := 0; k < len(cabsToBeSent); k++ {
-		cabsChannelTx <- cabsToBeSent[k]
-		time.Sleep(time.Duration(25) * time.Millisecond)
+func FindDeadOrders(database ElevatorDatabase, deadElevatorID string) []elevatorHardware.ButtonEvent {
+	deadElevator := GetElevatorFromID(database, deadElevatorID)
+	var deadOrders []elevatorHardware.ButtonEvent
+	var order elevatorHardware.ButtonEvent
+
+	for floor := 0; floor < singleElevator.NumFloors; floor++ {
+		for button := elevatorHardware.BT_HallUp; button < elevatorHardware.BT_Cab; button++ {
+			ownerOfOrder := deadElevator.Requests[floor][button].ElevatorID
+			order.Button = elevatorHardware.ButtonType(button)
+			order.Floor = floor
+
+			if ownerOfOrder == deadElevatorID {
+				deadOrders = append(deadOrders, order)
+			}
+		}
+
 	}
+	return deadOrders
 }

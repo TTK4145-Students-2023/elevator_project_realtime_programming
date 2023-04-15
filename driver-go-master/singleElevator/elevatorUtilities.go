@@ -1,17 +1,16 @@
 package singleElevator
 
 import (
-	"Driver-go/elevio"
+	"Driver-go/elevatorHardware"
 	"fmt"
 )
 
 func Elevator_uninitialized(myID string) Elevator {
 	elevator := Elevator{Floor: -10}
-	elevator.Behaviour = EB_Idle
-	elevator.Direction = elevio.MD_Stop
+	elevator.Behaviour = Idle
+	elevator.Direction = elevatorHardware.MD_Stop
 	elevator.ElevatorID = myID
-	elevator.Operating = WS_Unconnected
-	elevator.OrderNumber = 0
+	elevator.Operating = Unconnected
 	elevator.IsAlone = true
 
 	return elevator
@@ -19,11 +18,11 @@ func Elevator_uninitialized(myID string) Elevator {
 
 func SetAllLights(es Elevator) {
 	for floor := 0; floor < NumFloors; floor++ {
-		for btn := elevio.BT_HallUp; btn < NumButtons; btn++ {
-			if es.Requests[floor][btn].OrderState == SO_Confirmed {
-				elevio.SetButtonLamp(btn, floor, true)
+		for btn := elevatorHardware.BT_HallUp; btn < NumButtons; btn++ {
+			if es.Requests[floor][btn].OrderState == Confirmed {
+				elevatorHardware.SetButtonLamp(btn, floor, true)
 			} else {
-				elevio.SetButtonLamp(btn, floor, false)
+				elevatorHardware.SetButtonLamp(btn, floor, false)
 			}
 		}
 	}
@@ -32,14 +31,14 @@ func SetAllLights(es Elevator) {
 func Fsm_init() {
 	elevatorObject = Elevator_uninitialized(MyID)
 
-	elevio.SetFloorIndicator(elevatorObject.Floor)
+	elevatorHardware.SetFloorIndicator(elevatorObject.Floor)
 	SetAllLights(elevatorObject)
 }
 
 func Fsm_onInitBetweenFloors() {
-	elevio.SetMotorDirection(elevio.MD_Down)
-	elevatorObject.Direction = elevio.MD_Down
-	elevatorObject.Behaviour = EB_Moving
+	elevatorHardware.SetMotorDirection(elevatorHardware.MD_Down)
+	elevatorObject.Direction = elevatorHardware.MD_Down
+	elevatorObject.Behaviour = Moving
 }
 
 func GetSingleEleavtorObject() Elevator {
@@ -48,7 +47,7 @@ func GetSingleEleavtorObject() Elevator {
 
 func IsDoorOpen() bool {
 	var doorOpen = false
-	if elevatorObject.Behaviour == EB_DoorOpen {
+	if elevatorObject.Behaviour == DoorOpen {
 		doorOpen = true
 	}
 	return doorOpen
@@ -66,47 +65,47 @@ func SetWorkingState(state WorkingState) {
 }
 
 func AvailableAtCurrFloor(floor int) bool {
-	return (elevatorObject.Floor == floor) && (elevatorObject.Behaviour == EB_Idle)
+	return (elevatorObject.Floor == floor) && (elevatorObject.Behaviour == Idle)
 }
 
-func checkNoOrder(elevator Elevator, btn elevio.ButtonType) bool {
-	return elevator.Requests[elevator.Floor][btn].OrderState == SO_NoOrder
+func checkNoOrder(elevator Elevator, btn elevatorHardware.ButtonType) bool {
+	return elevator.Requests[elevator.Floor][btn].OrderState == NoOrder
 }
 
-func setNoOrder(e Elevator, floor int, buttonType elevio.ButtonType) Elevator {
+func setNoOrder(e Elevator, floor int, buttonType elevatorHardware.ButtonType) Elevator {
 	temp := e
-	temp.Requests[floor][buttonType].OrderState = SO_NoOrder
+	temp.Requests[floor][buttonType].OrderState = NoOrder
 	temp.Requests[floor][buttonType].ElevatorID = ""
 	return temp
 }
 
-func setConfirmedOrder(e Elevator, floor int, buttonType elevio.ButtonType, chosenElevator string) Elevator {
+func setConfirmedOrder(e Elevator, floor int, buttonType elevatorHardware.ButtonType, chosenElevator string) Elevator {
 	temp := e
-	temp.Requests[floor][buttonType].OrderState = SO_Confirmed
+	temp.Requests[floor][buttonType].OrderState = Confirmed
 	temp.Requests[floor][buttonType].ElevatorID = chosenElevator
 	return temp
 }
 
 func ebToString(eb ElevatorBehaviour) string {
 	switch eb {
-	case EB_Idle:
-		return "EB_Idle"
-	case EB_DoorOpen:
-		return "EB_DoorOpen"
-	case EB_Moving:
-		return "EB_Moving"
+	case Idle:
+		return "Idle"
+	case DoorOpen:
+		return "DoorOpen"
+	case Moving:
+		return "Moving"
 	default:
-		return "EB_UNDEFINED"
+		return "UNDEFINED"
 	}
 }
 
-func DirectionToString(direction elevio.MotorDirection) string {
+func DirectionToString(direction elevatorHardware.MotorDirection) string {
 	switch direction {
-	case elevio.MD_Up:
+	case elevatorHardware.MD_Up:
 		return "MotorUp"
-	case elevio.MD_Down:
+	case elevatorHardware.MD_Down:
 		return "MotorDown"
-	case elevio.MD_Stop:
+	case elevatorHardware.MD_Stop:
 		return "MotorStop"
 	default:
 		return "MotorUndefined"
@@ -119,7 +118,7 @@ func ElevatorPrint(es Elevator) {
 	fmt.Printf("  |floor = %-2d         |\n", es.Floor)
 	fmt.Printf("  |Direction  = %-12.12s|\n", DirectionToString(es.Direction))
 	fmt.Printf("  |behav = %-12.12s|\n", ebToString(es.Behaviour))
-	fmt.Printf("  |door = %-2d          |\n", es.DoorOpen)
+	//fmt.Printf("  |door = %-2d          |\n", es.DoorOpen)
 	fmt.Printf("  |operating = %-2d        |\n", es.Operating)
 	fmt.Println("  +--------------------+")
 	fmt.Println("  |  | up  | dn  | cab |")
@@ -132,4 +131,17 @@ func ElevatorPrint(es Elevator) {
 		fmt.Print("|\n")
 	}
 	fmt.Println("  +--------------------+")
+}
+
+func setLocalNewOrder(button elevatorHardware.ButtonEvent, chosenElevator string) Elevator {
+	elevatorObject.Requests[button.Floor][button.Button].OrderState = NewOrder
+	elevatorObject.Requests[button.Floor][button.Button].ElevatorID = chosenElevator
+	return elevatorObject
+}
+
+func setLocalConfirmedOrder(button elevatorHardware.ButtonEvent, chosenElevator string) Elevator {
+	elevatorObject.Requests[button.Floor][button.Button].OrderState = Confirmed
+	elevatorObject.Requests[button.Floor][button.Button].ElevatorID = chosenElevator
+	SetAllLights(elevatorObject)
+	return elevatorObject
 }
