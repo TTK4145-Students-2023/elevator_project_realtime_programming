@@ -88,7 +88,7 @@ func main() {
 		singleElevator.Fsm_onInitBetweenFloors()
 	}
 
-	go singleElevator.SendElevatorToDatabase(stateUpdateTx)
+	go singleElevator.SendElevatorToDatabase(stateUpdateTx) //TransmitStateUpdate
 
 	for {
 
@@ -97,124 +97,39 @@ func main() {
 			database = elevatorInterface.HandleNewFloorAndUpdateDatabase(floor, database, doorTimer, immobilityTimer)
 
 		case button := <-drv_buttons:
-			chosenElevator := manager.AssignOrderToElevator(database, button)
-			newElevatorUpdate := singleElevator.HandleNewOrder(chosenElevator, button, doorTimer, immobilityTimer)
-			database = manager.UpdateDatabase(newElevatorUpdate, database)
+			database = elevatorInterface.HandleNewButtonAndUpdateDatabase(button, database, doorTimer, immobilityTimer)
 
 		case obstruction := <-drv_obstr:
-			if singleElevator.IsDoorOpen() && obstruction {
-				doorTimer.Stop()
-				immobilityTimer.Reset(3 * time.Second)
-				fmt.Println("Nå har jeg resetet immobilityTimer i obstruction")
-			} else if !obstruction && singleElevator.IsDoorOpen() {
-				immobilityTimer.Stop()
-				fmt.Println("Stoppet immobilityTimer i obstruction")
-				singleElevator.SetWorkingState(singleElevator.WS_Connected)
-				doorTimer.Reset(3 * time.Second)
-			}
+			elevatorInterface.HandleObstruction(obstruction, doorTimer, immobilityTimer)
+
 		case <-drv_stop:
-			fmt.Println("Jeg er heis, ", singleElevator.MyID, "her er min heis: ")
-			singleElevator.ElevatorPrint(singleElevator.GetSingleEleavtorObject())
-			fmt.Println("..og her er databasen min: ")
-			for i := 0; i < len(database.ElevatorList); i++ {
-				singleElevator.ElevatorPrint(database.ElevatorList[i])
-			}
+			elevatorInterface.HandleStopButton(database) //Extra print function
 
 		case <-doorTimer.C:
 			singleElevator.Fsm_onDoorTimeout(doorTimer)
 
 		case <-immobilityTimer.C:
-			fmt.Println("Iam immobile", singleElevator.MyID)
 			database = manager.UpdateElevatorNetworkStateInDatabase(singleElevator.MyID, database, singleElevator.WS_Immobile)
 
-			var deadOrders []elevio.ButtonEvent
-			deadOrders = manager.FindDeadOrders(database, singleElevator.MyID)
-			for j := 0; j < len(deadOrders); j++ {
-				chosenElevator := manager.AssignOrderToElevator(database, deadOrders[j])
-				newElevatorUpdate := singleElevator.HandleNewOrder(chosenElevator, deadOrders[j], doorTimer, immobilityTimer)
-				database = manager.UpdateDatabase(newElevatorUpdate, database)
-			}
+			database = manager.UpdateDatabaseWithDeadOrders(singleElevator.MyID, immobilityTimer, doorTimer, database)
 
 		case stateUpdateMessage := <-stateUpdateRx:
-			if stateUpdateMessage.ElevatorID != singleElevator.MyID {
-				database = manager.UpdateDatabase(stateUpdateMessage.Elevator, database)
-
-				newChangedOrders := manager.SearchMessageForOrderUpdate(stateUpdateMessage, database)
-
-				for i := 0; i < len(newChangedOrders); i++ {
-					newOrder := newChangedOrders[i]
-					var newElevatorUpdate singleElevator.Elevator
-
-					if newOrder.PanelPair.OrderState == singleElevator.SO_Confirmed {
-						chosenElevator := newOrder.PanelPair.ElevatorID
-						newButton := newOrder.OrderedButton
-
-						newElevatorUpdate = singleElevator.HandleConfirmedOrder(chosenElevator, newButton, doorTimer, immobilityTimer)
-
-					} else if newOrder.PanelPair.OrderState == singleElevator.SO_NoOrder {
-						fmt.Println("Inne no order ifen")
-						newElevatorUpdate = singleElevator.Requests_clearOnFloor(newOrder.PanelPair.ElevatorID, newOrder.OrderedButton.Floor)
-					}
-
-					database = manager.UpdateDatabase(newElevatorUpdate, database)
-				}
-
+			if !manager.MessageIDEqualsMyID(stateUpdateMessage.ElevatorID) {
+				database = manager.UpdateDatabaseFromIncomingMessages(stateUpdateMessage, database, immobilityTimer, doorTimer)
 			}
 
 		case newCabs := <-cabsChannelRx:
-			var newElevatorUpdate singleElevator.Elevator
-			fmt.Println("I got a message update from cabs")
-			if newCabs.PanelPair.ElevatorID == singleElevator.MyID {
-				fmt.Println("I got a cab update and it is for me so I will go through the orders")
-				newElevatorUpdate = singleElevator.Fsm_onRequestButtonPress(newCabs.OrderedButton.Floor, newCabs.OrderedButton.Button, singleElevator.MyID, doorTimer, immobilityTimer)
-			} else {
-				fmt.Println("I got a cab updtae but it is not for me so i will just break")
-				break
-			}
+			newElevatorUpdate := manager.HandleRestoredCabs(newCabs, doorTimer, immobilityTimer)
 			database = manager.UpdateDatabase(newElevatorUpdate, database)
 
 		case p := <-peerUpdateCh:
 
 			if len(p.Lost) != 0 {
-				var deadOrders []elevio.ButtonEvent
-				for i := 0; i < len(p.Lost); i++ {
-					database = manager.UpdateElevatorNetworkStateInDatabase(p.Lost[i], database, singleElevator.WS_Unconnected)
-					if database.ConnectedElevators <= 1 {
-						singleElevator.SetIsAlone(true)
-					}
-					singleElevator.ElevatorPrint(manager.GetElevatorFromID(database, p.Lost[i]))
-					deadOrders = manager.FindDeadOrders(database, p.Lost[i])
-					singleElevator.ElevatorPrint(manager.GetElevatorFromID(database, p.Lost[i]))
-
-				}
-
-				for j := 0; j < len(deadOrders); j++ {
-					chosenElevator := manager.AssignOrderToElevator(database, deadOrders[j])
-					newElevatorUpdate := singleElevator.HandleNewOrder(chosenElevator, deadOrders[j], doorTimer, immobilityTimer)
-					database = manager.UpdateDatabase(newElevatorUpdate, database)
-				}
-
+				database = manager.HandlePeerLoss(p.Lost, database, immobilityTimer, doorTimer)
 			}
 
 			if p.New != "" {
-				if !singleElevator.GetIsAlone() {
-					cabsToBeSent := manager.FindCabCallsForElevator(database, p.New)
-					fmt.Println("Ready to send the following CABs:", cabsToBeSent)
-					for k := 0; k < len(cabsToBeSent); k++ {
-						cabsChannelTx <- cabsToBeSent[k]
-						time.Sleep(time.Duration(inputPollRateMs) * time.Millisecond)
-					}
-				}
-
-				if !manager.IsElevatorInDatabase(p.New, database) {
-					database.ElevatorList = append(database.ElevatorList, singleElevator.Elevator{ElevatorID: p.New, Operating: singleElevator.WS_Connected})
-				}
-
-				database = manager.UpdateElevatorNetworkStateInDatabase(p.New, database, singleElevator.WS_Connected)
-				if database.ConnectedElevators > 1 {
-					singleElevator.SetIsAlone(false)
-				}
-
+				database = manager.HandleNewPeer(p.New, database, cabsChannelTx)
 			}
 
 		}

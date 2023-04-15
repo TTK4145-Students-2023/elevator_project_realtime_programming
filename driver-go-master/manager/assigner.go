@@ -72,10 +72,6 @@ func FindDeadOrders(database ElevatorDatabase, deadElevatorID string) []elevio.B
 	return deadOrders
 }
 
-/*func FinLowestCostElevator(elevatorList []singleElevator.Elevator, order elevio.ButtonEvent) singleElevator.Elevator{
-
-}*/
-
 func FindCabCallsForElevator(database ElevatorDatabase, newPeer string) []OrderStruct {
 	var cabsToBeSent []OrderStruct
 	for i := 0; i < len(database.ElevatorList); i++ {
