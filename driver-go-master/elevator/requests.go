@@ -2,13 +2,7 @@ package elevator
 
 import (
 	"Driver-go/elevio"
-	"fmt"
 )
-
-type DirnBehaviourPair struct {
-	dirn      elevio.MotorDirection //Kanskje lage en egen type som er Direction
-	behaviour ElevatorBehaviour
-}
 
 func Requests_above(e Elevator) bool {
 	for floor := e.Floor + 1; floor < NumFloors; floor++ {
@@ -48,52 +42,54 @@ func Requests_here(e Elevator) bool {
 	return false
 }
 
-func Requests_chooseDirection(e Elevator) DirnBehaviourPair {
-	switch e.Dirn {
+func Requests_chooseDirection(e Elevator) DirectionBehaviourPair {
+	switch e.Direction {
 	case elevio.MD_Up:
 		if Requests_above(e) {
-			return DirnBehaviourPair{elevio.MD_Up, EB_Moving}
+			return DirectionBehaviourPair{elevio.MD_Up, EB_Moving}
 		} else if Requests_here(e) {
-			return DirnBehaviourPair{elevio.MD_Down, EB_DoorOpen}
+			return DirectionBehaviourPair{elevio.MD_Down, EB_DoorOpen}
 		} else if Requests_below(e) {
-			return DirnBehaviourPair{elevio.MD_Down, EB_Moving}
+			return DirectionBehaviourPair{elevio.MD_Down, EB_Moving}
 		} else {
-			return DirnBehaviourPair{elevio.MD_Stop, EB_Idle}
+			return DirectionBehaviourPair{elevio.MD_Stop, EB_Idle}
 		}
 	case elevio.MD_Down:
 		if Requests_below(e) {
-			return DirnBehaviourPair{elevio.MD_Down, EB_Moving}
+			return DirectionBehaviourPair{elevio.MD_Down, EB_Moving}
 		} else if Requests_here(e) {
-			return DirnBehaviourPair{elevio.MD_Up, EB_DoorOpen}
+			return DirectionBehaviourPair{elevio.MD_Up, EB_DoorOpen}
 		} else if Requests_above(e) {
-			return DirnBehaviourPair{elevio.MD_Up, EB_Moving}
+			return DirectionBehaviourPair{elevio.MD_Up, EB_Moving}
 		} else {
-			return DirnBehaviourPair{elevio.MD_Stop, EB_Idle}
+			return DirectionBehaviourPair{elevio.MD_Stop, EB_Idle}
 		}
 	case elevio.MD_Stop:
 		if Requests_here(e) {
-			return DirnBehaviourPair{elevio.MD_Stop, EB_DoorOpen}
+			return DirectionBehaviourPair{elevio.MD_Stop, EB_DoorOpen}
 		} else if Requests_above(e) {
-			return DirnBehaviourPair{elevio.MD_Up, EB_Moving}
+			return DirectionBehaviourPair{elevio.MD_Up, EB_Moving}
 		} else if Requests_below(e) {
-			return DirnBehaviourPair{elevio.MD_Down, EB_Moving}
+			return DirectionBehaviourPair{elevio.MD_Down, EB_Moving}
 		} else {
-			return DirnBehaviourPair{elevio.MD_Stop, EB_Idle}
+			return DirectionBehaviourPair{elevio.MD_Stop, EB_Idle}
 		}
 	default:
-		return DirnBehaviourPair{elevio.MD_Stop, EB_Idle}
+		return DirectionBehaviourPair{elevio.MD_Stop, EB_Idle}
 	}
 }
 
 func Requests_shouldStop(e Elevator) bool {
-	switch e.Dirn {
+	switch e.Direction {
 	case elevio.MD_Down:
-		return (e.Requests[e.Floor][elevio.BT_HallDown].OrderState == SO_Confirmed && e.Requests[e.Floor][elevio.BT_HallDown].ElevatorID == e.ElevatorID) ||
+		return (e.Requests[e.Floor][elevio.BT_HallDown].OrderState == SO_Confirmed &&
+			e.Requests[e.Floor][elevio.BT_HallDown].ElevatorID == e.ElevatorID) ||
 			e.Requests[e.Floor][elevio.BT_Cab].OrderState == SO_Confirmed ||
-			!Requests_below(e) //mulig vi må legge til ID-sjekk
+			!Requests_below(e)
 
 	case elevio.MD_Up:
-		return (e.Requests[e.Floor][elevio.BT_HallUp].OrderState == SO_Confirmed && e.Requests[e.Floor][elevio.BT_HallUp].ElevatorID == e.ElevatorID) ||
+		return (e.Requests[e.Floor][elevio.BT_HallUp].OrderState == SO_Confirmed &&
+			e.Requests[e.Floor][elevio.BT_HallUp].ElevatorID == e.ElevatorID) ||
 			e.Requests[e.Floor][elevio.BT_Cab].OrderState == SO_Confirmed ||
 			!Requests_above(e)
 
@@ -103,74 +99,46 @@ func Requests_shouldStop(e Elevator) bool {
 }
 
 func Requests_shouldClearImmediately(e Elevator, btn_floor int, btn_type elevio.ButtonType) bool {
-	return e.Floor == btn_floor && ((e.Dirn == elevio.MD_Up && btn_type == elevio.BT_HallUp) ||
-		(e.Dirn == elevio.MD_Down && btn_type == elevio.BT_HallDown) || e.Dirn == elevio.MD_Stop || btn_type == elevio.BT_Cab)
+	return e.Floor == btn_floor &&
+		((e.Direction == elevio.MD_Up && btn_type == elevio.BT_HallUp) ||
+			(e.Direction == elevio.MD_Down && btn_type == elevio.BT_HallDown) ||
+			e.Direction == elevio.MD_Stop || btn_type == elevio.BT_Cab)
 }
 
 func Requests_clearAtCurrentFloor(e Elevator) Elevator {
-	//Tanken: Alle går på heisen som stopper, så ordre må cleares uansett fordeling
-	e.Requests[e.Floor][elevio.BT_Cab].OrderState = SO_NoOrder
-	e.Requests[e.Floor][elevio.BT_Cab].ElevatorID = ""
-	switch e.Dirn {
+	e = setNoOrder(e, e.Floor, elevio.BT_Cab)
+
+	switch e.Direction {
 	case elevio.MD_Up:
-		if !Requests_above(e) && e.Requests[e.Floor][elevio.BT_HallUp].OrderState == SO_NoOrder {
-			e.Requests[e.Floor][elevio.BT_HallDown].OrderState = SO_NoOrder
-			e.Requests[e.Floor][elevio.BT_HallDown].ElevatorID = ""
+		if !Requests_above(e) && checkNoOrder(e, elevio.BT_HallUp) {
+			e = setNoOrder(e, e.Floor, elevio.BT_HallDown)
 		}
-		e.Requests[e.Floor][elevio.BT_HallUp].OrderState = SO_NoOrder
-		e.Requests[e.Floor][elevio.BT_HallUp].ElevatorID = ""
+		e = setNoOrder(e, e.Floor, elevio.BT_HallUp)
 	case elevio.MD_Down:
-		if !Requests_below(e) && e.Requests[e.Floor][elevio.BT_HallDown].OrderState == SO_NoOrder {
-			e.Requests[e.Floor][elevio.BT_HallUp].OrderState = SO_NoOrder
-			e.Requests[e.Floor][elevio.BT_HallUp].ElevatorID = ""
+		if !Requests_below(e) && checkNoOrder(e, elevio.BT_HallDown) {
+			e = setNoOrder(e, e.Floor, elevio.BT_HallUp)
 		}
-		e.Requests[e.Floor][elevio.BT_HallDown].OrderState = SO_NoOrder
-		e.Requests[e.Floor][elevio.BT_HallDown].ElevatorID = ""
+		e = setNoOrder(e, e.Floor, elevio.BT_HallDown)
 	case elevio.MD_Stop:
 		fallthrough
 	default:
-		e.Requests[e.Floor][elevio.BT_HallUp].OrderState = SO_NoOrder
-		e.Requests[e.Floor][elevio.BT_HallUp].ElevatorID = ""
-		e.Requests[e.Floor][elevio.BT_HallDown].OrderState = SO_NoOrder
-		e.Requests[e.Floor][elevio.BT_HallDown].ElevatorID = ""
+		e = setNoOrder(e, e.Floor, elevio.BT_HallUp)
+		e = setNoOrder(e, e.Floor, elevio.BT_HallDown)
 	}
 	return e
 }
 
 func Requests_clearOnFloor(arrivedElevatorID string, floor int) Elevator {
-	//Trenger vel egt ikke å sjekke om det er en ordre her fordi hvis den er fordelt,
-	//så er det jo en ordre der.
-	//OBS! Må sjekke state til heis fordi det kan skje at den ikke skal cleare. Litt mer kopi av Req_clearAtCurrFloor(). Eks: hente ut state fra database
-
-	fmt.Println("Nå er jeg inne i funksjonen req clear on floor, før jeg har gjort selve jobben")
 
 	if elevator.Requests[floor][elevio.BT_HallDown].OrderState != SO_NoOrder &&
 		(arrivedElevatorID == elevator.Requests[floor][elevio.BT_HallDown].ElevatorID) {
-		elevator.Requests[floor][elevio.BT_HallDown].OrderState = SO_NoOrder
-		elevator.Requests[floor][elevio.BT_HallDown].ElevatorID = ""
-		fmt.Println("Her clearer jeg bestillingen på floor", floor, ", som var fordelt til", arrivedElevatorID)
-		elevio.SetButtonLamp(elevio.BT_HallDown, floor, false) // La til denne men vet ikke hvorfor denne må være her siden setAlllights egentlig skal cleare lyset nederst
+		elevator = setNoOrder(elevator, floor, elevio.BT_HallDown)
+
 	} else if elevator.Requests[floor][elevio.BT_HallUp].OrderState != SO_NoOrder &&
 		(arrivedElevatorID == elevator.Requests[floor][elevio.BT_HallUp].ElevatorID) {
-		elevator.Requests[floor][elevio.BT_HallUp].OrderState = SO_NoOrder
-		elevator.Requests[floor][elevio.BT_HallUp].ElevatorID = ""
-		fmt.Println("Her clearer jeg bestillingen på floor", floor, ", som var fordelt til", arrivedElevatorID)
-		elevio.SetButtonLamp(elevio.BT_HallDown, floor, false) //HER OGSÅ
+		elevator = setNoOrder(elevator, floor, elevio.BT_HallUp)
 	}
 
 	SetAllLights(elevator)
 	return elevator
 }
-
-// ////////////////////////
-/*func Requests_clearFloorOrders(floor int) {
-	elevio.SetMotorDirection(elevio.MD_Stop)
-	elevio.SetButtonLamp(elevio.BT_Cab, floor, false)
-
-	//Hvilken hall-dir som skal cleares kommer an på heis-tilstand
-	elevio.SetButtonLamp(elevio.BT_HallUp, floor, false)
-	elevio.SetButtonLamp(elevio.BT_HallDown, floor, false)
-
-	elevio.SetDoorOpenLamp(true)
-}
-*/
