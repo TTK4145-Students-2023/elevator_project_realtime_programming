@@ -5,11 +5,9 @@ import (
 	"Driver-go/elevio"
 	"Driver-go/manager"
 	"Driver-go/network/bcast"
-	"Driver-go/network/localip"
 	"Driver-go/network/peers"
 	"flag"
 	"fmt"
-	"os"
 	"time"
 )
 
@@ -28,14 +26,14 @@ func main() {
 	// ... or alternatively, we can use the local IP address.
 	// (But since we can run multiple programs on the same PC, we also append the
 	//  process ID)
-	if id == "" {
+	/*if id == "" {
 		localIP, err := localip.LocalIP()
 		if err != nil {
 			fmt.Println(err)
 			localIP = "DISCONNECTED"
 		}
 		id = fmt.Sprintf("peer-%s-%d", localIP, os.Getpid())
-	}
+	}*/
 
 	// We make a channel for receiving updates on the id's of the peers that are
 	//  alive on the network
@@ -44,7 +42,7 @@ func main() {
 	// This could be used to signal that we are somehow "unavailable".
 	peerTxEnable := make(chan bool)
 
-	go peers.Transmitter(15600, id, peerTxEnable) //15647
+	go peers.Transmitter(15600, "18000", peerTxEnable) //15647
 	go peers.Receiver(15600, peerUpdateCh)
 
 	cabsChannelTx := make(chan elevator.OrderStruct)
@@ -52,7 +50,6 @@ func main() {
 
 	stateUpdateTx := make(chan elevator.StateUpdateStruct)
 	stateUpdateRx := make(chan elevator.StateUpdateStruct)
-
 
 	go bcast.Transmitter(16569, cabsChannelTx, stateUpdateTx)
 	go bcast.Receiver(16569, cabsChannelRx, stateUpdateRx)
@@ -72,7 +69,7 @@ func main() {
 
 	inputPollRateMs := 25
 
-	elevio.Init("localhost:"+id, nFloors) //endre denne for å bruke flere sockets for elevcd //15657
+	elevio.Init("localhost:15657", nFloors) //endre denne for å bruke flere sockets for elevcd //15657
 
 	drv_buttons := make(chan elevio.ButtonEvent)
 	drv_floors := make(chan int)
@@ -84,14 +81,12 @@ func main() {
 	go elevio.PollObstructionSwitch(drv_obstr)
 	go elevio.PollStopButton(drv_stop)
 
-
 	if elevio.GetFloor() == -1 {
 		elevator.Fsm_onInitBetweenFloors()
 	}
 
 	go elevator.SendStateUpdate(stateUpdateTx)
 
-	
 	for {
 
 		select {
@@ -179,7 +174,6 @@ func main() {
 			database = manager.UpdateDatabase(newElevatorUpdate, database)
 
 		case p := <-peerUpdateCh:
-			
 
 			if len(p.Lost) != 0 {
 				var deadOrders []elevio.ButtonEvent
