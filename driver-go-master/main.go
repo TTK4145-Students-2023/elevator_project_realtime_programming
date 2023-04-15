@@ -1,13 +1,16 @@
 package main
 
 import (
-	"Driver-go/elevator"
+	"Driver-go/elevatorInterface"
 	"Driver-go/elevio"
 	"Driver-go/manager"
 	"Driver-go/network/bcast"
+	"Driver-go/network/localip"
 	"Driver-go/network/peers"
+	"Driver-go/singleElevator"
 	"flag"
 	"fmt"
+	"os"
 	"time"
 )
 
@@ -26,14 +29,14 @@ func main() {
 	// ... or alternatively, we can use the local IP address.
 	// (But since we can run multiple programs on the same PC, we also append the
 	//  process ID)
-	/*if id == "" {
+	if id == "" {
 		localIP, err := localip.LocalIP()
 		if err != nil {
 			fmt.Println(err)
 			localIP = "DISCONNECTED"
 		}
 		id = fmt.Sprintf("peer-%s-%d", localIP, os.Getpid())
-	}*/
+	}
 
 	// We make a channel for receiving updates on the id's of the peers that are
 	//  alive on the network
@@ -42,14 +45,14 @@ func main() {
 	// This could be used to signal that we are somehow "unavailable".
 	peerTxEnable := make(chan bool)
 
-	go peers.Transmitter(15600, "18000", peerTxEnable) //15647
+	go peers.Transmitter(15600, id, peerTxEnable) //15647
 	go peers.Receiver(15600, peerUpdateCh)
 
-	cabsChannelTx := make(chan elevator.OrderStruct)
-	cabsChannelRx := make(chan elevator.OrderStruct)
+	cabsChannelTx := make(chan manager.OrderStruct)
+	cabsChannelRx := make(chan manager.OrderStruct)
 
-	stateUpdateTx := make(chan elevator.StateUpdateStruct)
-	stateUpdateRx := make(chan elevator.StateUpdateStruct)
+	stateUpdateTx := make(chan singleElevator.ElevatorUpdateToDatabase)
+	stateUpdateRx := make(chan singleElevator.ElevatorUpdateToDatabase)
 
 	go bcast.Transmitter(16569, cabsChannelTx, stateUpdateTx)
 	go bcast.Receiver(16569, cabsChannelRx, stateUpdateRx)
@@ -69,7 +72,7 @@ func main() {
 
 	inputPollRateMs := 25
 
-	elevio.Init("localhost:15657", nFloors) //endre denne for å bruke flere sockets for elevcd //15657
+	elevio.Init("localhost:"+id, nFloors) //endre denne for å bruke flere sockets for elevcd //15657
 
 	drv_buttons := make(chan elevio.ButtonEvent)
 	drv_floors := make(chan int)
@@ -82,78 +85,75 @@ func main() {
 	go elevio.PollStopButton(drv_stop)
 
 	if elevio.GetFloor() == -1 {
-		elevator.Fsm_onInitBetweenFloors()
+		singleElevator.Fsm_onInitBetweenFloors()
 	}
 
-	go elevator.SendStateUpdate(stateUpdateTx)
+	go singleElevator.SendElevatorToDatabase(stateUpdateTx)
 
 	for {
 
 		select {
 		case floor := <-drv_floors:
-			var newElevatorUpdate elevator.Elevator
-			newElevatorUpdate = elevator.Fsm_onFloorArrival(floor, doorTimer, immobilityTimer)
-			fmt.Println("Her oppdaterer jeg databasen med en slettet ordre")
-			database = manager.UpdateDatabase(newElevatorUpdate, database)
+			database = elevatorInterface.HandleNewFloorAndUpdateDatabase(floor, database, doorTimer, immobilityTimer)
 
 		case button := <-drv_buttons:
 			chosenElevator := manager.AssignOrderToElevator(database, button)
-			newElevatorUpdate := elevator.HandleNewOrder(chosenElevator, button, doorTimer, immobilityTimer)
+			newElevatorUpdate := singleElevator.HandleNewOrder(chosenElevator, button, doorTimer, immobilityTimer)
 			database = manager.UpdateDatabase(newElevatorUpdate, database)
 
 		case obstruction := <-drv_obstr:
-			if elevator.IsDoorOpen() && obstruction {
+			if singleElevator.IsDoorOpen() && obstruction {
 				doorTimer.Stop()
 				immobilityTimer.Reset(3 * time.Second)
 				fmt.Println("Nå har jeg resetet immobilityTimer i obstruction")
-			} else if !obstruction && elevator.IsDoorOpen() {
+			} else if !obstruction && singleElevator.IsDoorOpen() {
 				immobilityTimer.Stop()
 				fmt.Println("Stoppet immobilityTimer i obstruction")
-				elevator.SetWorkingState(elevator.WS_Connected)
+				singleElevator.SetWorkingState(singleElevator.WS_Connected)
 				doorTimer.Reset(3 * time.Second)
 			}
 		case <-drv_stop:
-			fmt.Println("Jeg er heis, ", elevator.MyID, "her er min heis: ")
-			elevator.ElevatorPrint(elevator.GetSingleEleavtorStruct())
+			fmt.Println("Jeg er heis, ", singleElevator.MyID, "her er min heis: ")
+			singleElevator.ElevatorPrint(singleElevator.GetSingleEleavtorObject())
 			fmt.Println("..og her er databasen min: ")
 			for i := 0; i < len(database.ElevatorList); i++ {
-				elevator.ElevatorPrint(database.ElevatorList[i])
+				singleElevator.ElevatorPrint(database.ElevatorList[i])
 			}
 
 		case <-doorTimer.C:
-			elevator.Fsm_onDoorTimeout(doorTimer)
+			singleElevator.Fsm_onDoorTimeout(doorTimer)
 
 		case <-immobilityTimer.C:
-			fmt.Println("Iam immobile", elevator.MyID)
-			database = manager.UpdateElevatorNetworkStateInDatabase(elevator.MyID, database, elevator.WS_Immobile)
+			fmt.Println("Iam immobile", singleElevator.MyID)
+			database = manager.UpdateElevatorNetworkStateInDatabase(singleElevator.MyID, database, singleElevator.WS_Immobile)
 
 			var deadOrders []elevio.ButtonEvent
-			deadOrders = manager.FindDeadOrders(database, elevator.MyID)
+			deadOrders = manager.FindDeadOrders(database, singleElevator.MyID)
 			for j := 0; j < len(deadOrders); j++ {
 				chosenElevator := manager.AssignOrderToElevator(database, deadOrders[j])
-				newElevatorUpdate := elevator.HandleNewOrder(chosenElevator, deadOrders[j], doorTimer, immobilityTimer)
+				newElevatorUpdate := singleElevator.HandleNewOrder(chosenElevator, deadOrders[j], doorTimer, immobilityTimer)
 				database = manager.UpdateDatabase(newElevatorUpdate, database)
 			}
 
-		case aliveMessage := <-stateUpdateRx:
-			if aliveMessage.ElevatorID != elevator.MyID {
-				database = manager.UpdateDatabase(aliveMessage.Elevator, database)
+		case stateUpdateMessage := <-stateUpdateRx:
+			if stateUpdateMessage.ElevatorID != singleElevator.MyID {
+				database = manager.UpdateDatabase(stateUpdateMessage.Elevator, database)
 
-				newChangedOrders := manager.SearchMessageForOrderUpdate(aliveMessage, database)
+				newChangedOrders := manager.SearchMessageForOrderUpdate(stateUpdateMessage, database)
 
 				for i := 0; i < len(newChangedOrders); i++ {
 					newOrder := newChangedOrders[i]
-					var newElevatorUpdate elevator.Elevator
+					var newElevatorUpdate singleElevator.Elevator
 
-					if newOrder.PanelPair.OrderState == elevator.SO_Confirmed {
+					if newOrder.PanelPair.OrderState == singleElevator.SO_Confirmed {
 						chosenElevator := newOrder.PanelPair.ElevatorID
 						newButton := newOrder.OrderedButton
 
-						newElevatorUpdate = elevator.HandleConfirmedOrder(chosenElevator, newButton, doorTimer, immobilityTimer)
+						newElevatorUpdate = singleElevator.HandleConfirmedOrder(chosenElevator, newButton, doorTimer, immobilityTimer)
 
-					} else if newOrder.PanelPair.OrderState == elevator.SO_NoOrder {
+					} else if newOrder.PanelPair.OrderState == singleElevator.SO_NoOrder {
 						fmt.Println("Inne no order ifen")
-						newElevatorUpdate = elevator.Requests_clearOnFloor(newOrder.PanelPair.ElevatorID, newOrder.OrderedButton.Floor)
+						newElevatorUpdate = singleElevator.Requests_clearOnFloor(newOrder.PanelPair.ElevatorID, newOrder.OrderedButton.Floor)
 					}
 
 					database = manager.UpdateDatabase(newElevatorUpdate, database)
@@ -162,11 +162,11 @@ func main() {
 			}
 
 		case newCabs := <-cabsChannelRx:
-			var newElevatorUpdate elevator.Elevator
+			var newElevatorUpdate singleElevator.Elevator
 			fmt.Println("I got a message update from cabs")
-			if newCabs.PanelPair.ElevatorID == elevator.MyID {
+			if newCabs.PanelPair.ElevatorID == singleElevator.MyID {
 				fmt.Println("I got a cab update and it is for me so I will go through the orders")
-				newElevatorUpdate = elevator.Fsm_onRequestButtonPress(newCabs.OrderedButton.Floor, newCabs.OrderedButton.Button, elevator.MyID, doorTimer, immobilityTimer)
+				newElevatorUpdate = singleElevator.Fsm_onRequestButtonPress(newCabs.OrderedButton.Floor, newCabs.OrderedButton.Button, singleElevator.MyID, doorTimer, immobilityTimer)
 			} else {
 				fmt.Println("I got a cab updtae but it is not for me so i will just break")
 				break
@@ -178,26 +178,26 @@ func main() {
 			if len(p.Lost) != 0 {
 				var deadOrders []elevio.ButtonEvent
 				for i := 0; i < len(p.Lost); i++ {
-					database = manager.UpdateElevatorNetworkStateInDatabase(p.Lost[i], database, elevator.WS_Unconnected)
+					database = manager.UpdateElevatorNetworkStateInDatabase(p.Lost[i], database, singleElevator.WS_Unconnected)
 					if database.ConnectedElevators <= 1 {
-						elevator.SetIAmAlone(true)
+						singleElevator.SetIsAlone(true)
 					}
-					elevator.ElevatorPrint(manager.GetElevatorFromID(database, p.Lost[i]))
+					singleElevator.ElevatorPrint(manager.GetElevatorFromID(database, p.Lost[i]))
 					deadOrders = manager.FindDeadOrders(database, p.Lost[i])
-					elevator.ElevatorPrint(manager.GetElevatorFromID(database, p.Lost[i]))
+					singleElevator.ElevatorPrint(manager.GetElevatorFromID(database, p.Lost[i]))
 
 				}
 
 				for j := 0; j < len(deadOrders); j++ {
 					chosenElevator := manager.AssignOrderToElevator(database, deadOrders[j])
-					newElevatorUpdate := elevator.HandleNewOrder(chosenElevator, deadOrders[j], doorTimer, immobilityTimer)
+					newElevatorUpdate := singleElevator.HandleNewOrder(chosenElevator, deadOrders[j], doorTimer, immobilityTimer)
 					database = manager.UpdateDatabase(newElevatorUpdate, database)
 				}
 
 			}
 
 			if p.New != "" {
-				if !elevator.GetIAmAlone() {
+				if !singleElevator.GetIsAlone() {
 					cabsToBeSent := manager.FindCabCallsForElevator(database, p.New)
 					fmt.Println("Ready to send the following CABs:", cabsToBeSent)
 					for k := 0; k < len(cabsToBeSent); k++ {
@@ -207,12 +207,12 @@ func main() {
 				}
 
 				if !manager.IsElevatorInDatabase(p.New, database) {
-					database.ElevatorList = append(database.ElevatorList, elevator.Elevator{ElevatorID: p.New, Operating: elevator.WS_Connected})
+					database.ElevatorList = append(database.ElevatorList, singleElevator.Elevator{ElevatorID: p.New, Operating: singleElevator.WS_Connected})
 				}
 
-				database = manager.UpdateElevatorNetworkStateInDatabase(p.New, database, elevator.WS_Connected)
+				database = manager.UpdateElevatorNetworkStateInDatabase(p.New, database, singleElevator.WS_Connected)
 				if database.ConnectedElevators > 1 {
-					elevator.SetIAmAlone(false)
+					singleElevator.SetIsAlone(false)
 				}
 
 			}

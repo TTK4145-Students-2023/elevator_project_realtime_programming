@@ -1,17 +1,17 @@
-package elevator
+package singleElevator
 
 import "Driver-go/elevio"
 
 func Elevator_uninitialized(myID string) Elevator {
-	elev := Elevator{Floor: -10}
-	elev.Behaviour = EB_Idle
-	elev.Direction = elevio.MD_Stop
-	elev.ElevatorID = myID
-	elev.Operating = WS_Unconnected
-	elev.OrderNumber = 0
-	elev.SingleElevator = true
+	elevator := Elevator{Floor: -10}
+	elevator.Behaviour = EB_Idle
+	elevator.Direction = elevio.MD_Stop
+	elevator.ElevatorID = myID
+	elevator.Operating = WS_Unconnected
+	elevator.OrderNumber = 0
+	elevator.IsAlone = true
 
-	return elev
+	return elevator
 }
 
 func SetAllLights(es Elevator) {
@@ -27,47 +27,45 @@ func SetAllLights(es Elevator) {
 }
 
 func Fsm_init() {
-	elevator = Elevator_uninitialized(MyID)
+	elevatorObject = Elevator_uninitialized(MyID)
 
-	elevio.SetFloorIndicator(elevator.Floor)
-	SetAllLights(elevator)
+	elevio.SetFloorIndicator(elevatorObject.Floor)
+	SetAllLights(elevatorObject)
 }
 
 func Fsm_onInitBetweenFloors() {
 	elevio.SetMotorDirection(elevio.MD_Down)
-	elevator.Direction = elevio.MD_Down
-	elevator.Behaviour = EB_Moving
+	elevatorObject.Direction = elevio.MD_Down
+	elevatorObject.Behaviour = EB_Moving
 }
 
-func GetSingleEleavtorStruct() Elevator {
-	return elevator
+func GetSingleEleavtorObject() Elevator {
+	return elevatorObject
 }
 
-func Elevator_increaseOrderNumber() {
-	elevator.OrderNumber++
-}
+
 
 func IsDoorOpen() bool {
 	var doorOpen = false
-	if elevator.Behaviour == EB_DoorOpen {
+	if elevatorObject.Behaviour == EB_DoorOpen {
 		doorOpen = true
 	}
 	return doorOpen
 }
 
-func GetIAmAlone() bool {
-	return elevator.SingleElevator
+func GetIsAlone() bool {
+	return elevatorObject.IsAlone
 }
-func SetIAmAlone(alone bool) {
-	elevator.SingleElevator = alone
+func SetIsAlone(alone bool) {
+	elevatorObject.IsAlone = alone
 }
 
 func SetWorkingState(state WorkingState) {
-	elevator.Operating = state
+	elevatorObject.Operating = state
 }
 
 func AvailableAtCurrFloor(floor int) bool {
-	return (elevator.Floor == floor) && (elevator.Behaviour == EB_Idle)
+	return (elevatorObject.Floor == floor) && (elevatorObject.Behaviour == EB_Idle)
 }
 
 func checkNoOrder(elevator Elevator, btn elevio.ButtonType) bool {

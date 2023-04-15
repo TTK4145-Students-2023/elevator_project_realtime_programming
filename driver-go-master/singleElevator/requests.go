@@ -1,4 +1,4 @@
-package elevator
+package singleElevator
 
 import (
 	"Driver-go/elevio"
@@ -130,15 +130,15 @@ func Requests_clearAtCurrentFloor(e Elevator) Elevator {
 
 func Requests_clearOnFloor(arrivedElevatorID string, floor int) Elevator {
 
-	if elevator.Requests[floor][elevio.BT_HallDown].OrderState != SO_NoOrder &&
-		(arrivedElevatorID == elevator.Requests[floor][elevio.BT_HallDown].ElevatorID) {
-		elevator = setNoOrder(elevator, floor, elevio.BT_HallDown)
+	if elevatorObject.Requests[floor][elevio.BT_HallDown].OrderState != SO_NoOrder &&
+		(arrivedElevatorID == elevatorObject.Requests[floor][elevio.BT_HallDown].ElevatorID) {
+			elevatorObject = setNoOrder(elevatorObject, floor, elevio.BT_HallDown)
 
-	} else if elevator.Requests[floor][elevio.BT_HallUp].OrderState != SO_NoOrder &&
-		(arrivedElevatorID == elevator.Requests[floor][elevio.BT_HallUp].ElevatorID) {
-		elevator = setNoOrder(elevator, floor, elevio.BT_HallUp)
+	} else if elevatorObject.Requests[floor][elevio.BT_HallUp].OrderState != SO_NoOrder &&
+		(arrivedElevatorID == elevatorObject.Requests[floor][elevio.BT_HallUp].ElevatorID) {
+			elevatorObject = setNoOrder(elevatorObject, floor, elevio.BT_HallUp)
 	}
 
-	SetAllLights(elevator)
-	return elevator
+	SetAllLights(elevatorObject)
+	return elevatorObject
 }

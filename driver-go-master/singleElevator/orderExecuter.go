@@ -1,26 +1,42 @@
-package elevator
+package singleElevator
 
 import (
 	"Driver-go/elevio"
 	"time"
 )
 
+type ElevatorUpdateToDatabase struct {
+	ElevatorID string
+	Elevator   Elevator
+}
+
+func SendElevatorToDatabase(aliveTx chan ElevatorUpdateToDatabase) {
+	ElevatorUpdate := ElevatorUpdateToDatabase{
+		ElevatorID: elevatorObject.ElevatorID,
+		Elevator:   elevatorObject}
+	for {
+		time.Sleep(200 * time.Millisecond)
+		ElevatorUpdate.Elevator = elevatorObject
+		aliveTx <- ElevatorUpdate
+	}
+}
+
 func Fsm_setLocalNewOrder(button elevio.ButtonEvent, chosenElevator string) Elevator {
-	elevator.Requests[button.Floor][button.Button].OrderState = SO_NewOrder
-	elevator.Requests[button.Floor][button.Button].ElevatorID = chosenElevator
-	return elevator
+	elevatorObject.Requests[button.Floor][button.Button].OrderState = SO_NewOrder
+	elevatorObject.Requests[button.Floor][button.Button].ElevatorID = chosenElevator
+	return elevatorObject
 }
 
 func Fsm_setLocalConfirmedOrder(button elevio.ButtonEvent, chosenElevator string) Elevator {
-	elevator.Requests[button.Floor][button.Button].OrderState = SO_Confirmed
-	elevator.Requests[button.Floor][button.Button].ElevatorID = chosenElevator
-	SetAllLights(elevator)
-	return elevator
+	elevatorObject.Requests[button.Floor][button.Button].OrderState = SO_Confirmed
+	elevatorObject.Requests[button.Floor][button.Button].ElevatorID = chosenElevator
+	SetAllLights(elevatorObject)
+	return elevatorObject
 }
 
 func Fsm_updateLocalRequests(updatedElevator Elevator) {
-	elevator.Requests = updatedElevator.Requests
-	SetAllLights(elevator)
+	elevatorObject.Requests = updatedElevator.Requests
+	SetAllLights(elevatorObject)
 }
 
 func HandleNewOrder(chosenElevator string, button elevio.ButtonEvent, doorTimer *time.Timer, immobilityTimer *time.Timer) Elevator {

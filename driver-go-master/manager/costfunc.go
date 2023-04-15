@@ -1,8 +1,8 @@
 package manager
 
 import (
-	"Driver-go/elevator"
 	"Driver-go/elevio"
+	"Driver-go/singleElevator"
 	"math"
 )
 
@@ -16,7 +16,7 @@ const (
 	waitingTimeRate     = 0.1
 )
 
-func calculateCost(e elevator.Elevator, order elevio.ButtonEvent) float64 {
+func calculateCost(e singleElevator.Elevator, order elevio.ButtonEvent) float64 {
 	// Determine current location of elevator and direction
 	currFloor := e.Floor
 	currDir := e.Direction
@@ -26,7 +26,7 @@ func calculateCost(e elevator.Elevator, order elevio.ButtonEvent) float64 {
 
 	// Calculate cost based on distance
 	cost := distance * ratePerUnitDistance
-	if e.Behaviour == elevator.EB_Idle {
+	if e.Behaviour == singleElevator.EB_Idle {
 		return cost
 
 	} else {
@@ -57,8 +57,8 @@ func getDirection(fromFloor, toFloor int) elevio.MotorDirection {
 }
 
 // Helper function to calculate waiting time cost
-func waitingTimeCost(e elevator.Elevator) float64 {
-	if e.Behaviour == elevator.EB_DoorOpen {
+func waitingTimeCost(e singleElevator.Elevator) float64 {
+	if e.Behaviour == singleElevator.EB_DoorOpen {
 		return waitingTime * waitingTimeRate
 	}
 	return 0
