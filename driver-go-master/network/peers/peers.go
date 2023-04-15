@@ -1,8 +1,8 @@
 package peers
 
 import (
-	"Driver-go/elevator"
 	"Driver-go/network/conn"
+	
 	"fmt"
 	"net"
 	"sort"
@@ -88,13 +88,4 @@ func Receiver(port int, peerUpdateCh chan<- PeerUpdate) {
 	}
 }
 
-func IsPeerOnNetwork(elevator elevator.Elevator, peerUpdate PeerUpdate) bool {
 
-	for i := 0; i < len(peerUpdate.Peers); i++ {
-		idElevator := peerUpdate.Peers[i]
-		if idElevator == elevator.ElevatorID {
-			return true
-		}
-	}
-	return false
-}

@@ -1,8 +1,8 @@
 package manager
 
 import (
-	"Driver-go/elevator"
 	"Driver-go/elevio"
+	"Driver-go/singleElevator"
 	"time"
 
 	"fmt"
@@ -10,14 +10,10 @@ import (
 
 type ElevatorDatabase struct {
 	ConnectedElevators int
-	ElevatorList       []elevator.Elevator
+	ElevatorList       []singleElevator.Elevator
 }
 
-func UpdateDatabase(elevatorToBeUpdated elevator.Elevator, database ElevatorDatabase) ElevatorDatabase {
-	/*if elevatorToBeUpdated.Operating != elevator.WS_Immobile {
-		elevatorToBeUpdated.Operating = elevator.WS_Connected
-		fmt.Println("Her setter jeg operating staten til ", elevatorToBeUpdated.ElevatorID, " til ", elevatorToBeUpdated.Operating) //OBS! Nå håndterer vi running-state som connected
-	}*/
+func UpdateDatabase(elevatorToBeUpdated singleElevator.Elevator, database ElevatorDatabase) ElevatorDatabase {
 
 	for i := 0; i < len(database.ElevatorList); i++ {
 		if database.ElevatorList[i].ElevatorID == elevatorToBeUpdated.ElevatorID {
@@ -27,14 +23,13 @@ func UpdateDatabase(elevatorToBeUpdated elevator.Elevator, database ElevatorData
 	return database
 }
 
-func UpdateElevatorNetworkStateInDatabase(elevatorID string, database ElevatorDatabase, newState elevator.WorkingState) ElevatorDatabase {
+func UpdateElevatorNetworkStateInDatabase(elevatorID string, database ElevatorDatabase, newState singleElevator.WorkingState) ElevatorDatabase {
 	for i := 0; i < len(database.ElevatorList); i++ {
 		if elevatorID == database.ElevatorList[i].ElevatorID {
 			database.ElevatorList[i].Operating = newState
-			fmt.Println("Her setter jeg operating staten til ", database.ElevatorList[i].ElevatorID, " til ", database.ElevatorList[i].Operating)
-			if newState == elevator.WS_Unconnected {
+			if newState == singleElevator.WS_Unconnected {
 				database.ConnectedElevators--
-			} else if newState == elevator.WS_Connected {
+			} else if newState == singleElevator.WS_Connected {
 				database.ConnectedElevators++
 			}
 		}
@@ -44,64 +39,97 @@ func UpdateElevatorNetworkStateInDatabase(elevatorID string, database ElevatorDa
 	return database
 }
 
-func SearchMessageForOrderUpdate(aliveMessage elevator.StateUpdateStruct, database ElevatorDatabase) []elevator.OrderStruct {
+func UpdateDatabaseWithDeadOrders(deadElevatorID string, immobilityTimer *time.Timer, doorTimer *time.Timer, database ElevatorDatabase) ElevatorDatabase {
+	var deadOrders []elevio.ButtonEvent
+	deadOrders = FindDeadOrders(database, deadElevatorID)
+	for j := 0; j < len(deadOrders); j++ {
+		chosenElevator := AssignOrderToElevator(database, deadOrders[j])
+		newElevatorUpdate := singleElevator.HandleNewOrder(chosenElevator, deadOrders[j], doorTimer, immobilityTimer)
+		database = UpdateDatabase(newElevatorUpdate, database)
+	}
+	return database
+}
 
-	var newChangedOrders []elevator.OrderStruct
+func UpdateDatabaseFromIncomingMessages(stateUpdateMessage singleElevator.ElevatorStateUpdate, database ElevatorDatabase, immobilityTimer *time.Timer, doorTimer *time.Timer) ElevatorDatabase {
+	database = UpdateDatabase(stateUpdateMessage.Elevator, database)
 
-	localElevator := GetElevatorFromID(database, elevator.MyID)
+	newChangedOrders := SearchMessageForOrderUpdate(stateUpdateMessage, database)
+	for i := 0; i < len(newChangedOrders); i++ {
+		newOrder := newChangedOrders[i]
+		var newElevatorUpdate singleElevator.Elevator
 
-	for floor := 0; floor < elevator.NumFloors; floor++ {
+		if newOrder.PanelPair.OrderState == singleElevator.SO_Confirmed {
+			chosenElevator := newOrder.PanelPair.ElevatorID
+			newButton := newOrder.OrderedButton
+
+			newElevatorUpdate = singleElevator.HandleConfirmedOrder(chosenElevator, newButton, doorTimer, immobilityTimer)
+
+		} else if newOrder.PanelPair.OrderState == singleElevator.SO_NoOrder {
+			newElevatorUpdate = singleElevator.Requests_clearOnFloor(newOrder.PanelPair.ElevatorID, newOrder.OrderedButton.Floor)
+		}
+
+		database = UpdateDatabase(newElevatorUpdate, database)
+	}
+	return database
+
+}
+
+func HandleRestoredCabs(newCabs OrderStruct, doorTimer *time.Timer, immobilityTimer *time.Timer) singleElevator.Elevator {
+	var newElevatorUpdate singleElevator.Elevator
+	if MessageIDEqualsMyID(newCabs.PanelPair.ElevatorID) {
+		newElevatorUpdate = singleElevator.Fsm_onRequestButtonPress(newCabs.OrderedButton.Floor, newCabs.OrderedButton.Button, singleElevator.MyID, doorTimer, immobilityTimer)
+	}
+	return newElevatorUpdate
+}
+
+func SearchMessageForOrderUpdate(stateUpdateMessage singleElevator.ElevatorStateUpdate, database ElevatorDatabase) []OrderStruct {
+
+	var newChangedOrders []OrderStruct
+
+	localElevator := GetElevatorFromID(database, singleElevator.MyID)
+
+	for floor := 0; floor < singleElevator.NumFloors; floor++ {
 		for button := elevio.BT_HallUp; button < elevio.BT_Cab; button++ {
 
 			currentButtonEvent := elevio.ButtonEvent{Floor: floor, Button: button}
 
-			receivedOrderState := aliveMessage.Elevator.Requests[floor][button].OrderState
+			receivedOrderState := stateUpdateMessage.Elevator.Requests[floor][button].OrderState
 			localOrderState := localElevator.Requests[floor][button].OrderState
 
-			receivedRequestID := aliveMessage.Elevator.Requests[floor][button].ElevatorID
+			receivedRequestID := stateUpdateMessage.Elevator.Requests[floor][button].ElevatorID
 			localRequestID := localElevator.Requests[floor][button].ElevatorID
 
-			if receivedOrderState != localOrderState { // || receivedRequestID != localRequestID {
+			if receivedOrderState != localOrderState {
+				if receivedOrderState == singleElevator.SO_NoOrder {
 
-				/*changedOwner := receivedRequestID != localRequestID
-				fmt.Println("Endring i eier av ordre:", (receivedRequestID != localRequestID))
-				if changedOwner {
-					fmt.Println("Old owner:", localRequestID)
-					fmt.Println("New owner:", receivedRequestID)
-				}*/
-				if receivedOrderState == elevator.SO_NoOrder {
+					if localRequestID == stateUpdateMessage.ElevatorID &&
+						localOrderState == singleElevator.SO_Confirmed {
 
-					if localRequestID == aliveMessage.ElevatorID &&
-						localOrderState == elevator.SO_Confirmed {
+						panelPair := singleElevator.OrderpanelPair{ElevatorID: stateUpdateMessage.ElevatorID, OrderState: singleElevator.SO_NoOrder}
+						newChangedOrders = append(newChangedOrders, MakeOrder(panelPair, currentButtonEvent))
 
-						panelPair := elevator.OrderpanelPair{ElevatorID: aliveMessage.ElevatorID, OrderState: elevator.SO_NoOrder}
-						newChangedOrders = append(newChangedOrders, elevator.MakeOrder(panelPair, currentButtonEvent))
-						fmt.Println("I found a no order so I will erase it")
+					} else if localRequestID == stateUpdateMessage.ElevatorID &&
+						localOrderState == singleElevator.SO_NewOrder {
 
-					} else if localRequestID == aliveMessage.ElevatorID &&
-						localOrderState == elevator.SO_NewOrder {
-
-						panelPair := elevator.OrderpanelPair{ElevatorID: aliveMessage.ElevatorID, OrderState: elevator.SO_NoOrder}
-						newChangedOrders = append(newChangedOrders, elevator.MakeOrder(panelPair, currentButtonEvent))
+						panelPair := singleElevator.OrderpanelPair{ElevatorID: stateUpdateMessage.ElevatorID, OrderState: singleElevator.SO_NoOrder}
+						newChangedOrders = append(newChangedOrders, MakeOrder(panelPair, currentButtonEvent))
 
 					}
-				} else if receivedOrderState == elevator.SO_NewOrder {
+				} else if receivedOrderState == singleElevator.SO_NewOrder {
 
 					if receivedRequestID == localElevator.ElevatorID {
-						fmt.Println("Her fikk jeg en new order og den var til meg så jeg setter den confirmed")
-						panelPair := elevator.OrderpanelPair{ElevatorID: localElevator.ElevatorID, OrderState: elevator.SO_Confirmed}
-						newChangedOrders = append(newChangedOrders, elevator.MakeOrder(panelPair, currentButtonEvent))
+						panelPair := singleElevator.OrderpanelPair{ElevatorID: localElevator.ElevatorID, OrderState: singleElevator.SO_Confirmed}
+						newChangedOrders = append(newChangedOrders, MakeOrder(panelPair, currentButtonEvent))
 
 					} else {
-						panelPair := elevator.OrderpanelPair{ElevatorID: aliveMessage.ElevatorID, OrderState: elevator.SO_NewOrder}
-						newChangedOrders = append(newChangedOrders, elevator.MakeOrder(panelPair, currentButtonEvent))
+						panelPair := singleElevator.OrderpanelPair{ElevatorID: stateUpdateMessage.ElevatorID, OrderState: singleElevator.SO_NewOrder}
+						newChangedOrders = append(newChangedOrders, MakeOrder(panelPair, currentButtonEvent))
 					}
-				} else if receivedOrderState == elevator.SO_Confirmed {
+				} else if receivedOrderState == singleElevator.SO_Confirmed {
 
-					if receivedRequestID == aliveMessage.ElevatorID {
-						fmt.Println("Her fikk jeg en confirmed order og den var fra eieren så jeg setter den confirmed")
-						panelPair := elevator.OrderpanelPair{ElevatorID: aliveMessage.ElevatorID, OrderState: elevator.SO_Confirmed}
-						newChangedOrders = append(newChangedOrders, elevator.MakeOrder(panelPair, currentButtonEvent))
+					if receivedRequestID == stateUpdateMessage.ElevatorID {
+						panelPair := singleElevator.OrderpanelPair{ElevatorID: stateUpdateMessage.ElevatorID, OrderState: singleElevator.SO_Confirmed}
+						newChangedOrders = append(newChangedOrders, MakeOrder(panelPair, currentButtonEvent))
 
 					}
 				}

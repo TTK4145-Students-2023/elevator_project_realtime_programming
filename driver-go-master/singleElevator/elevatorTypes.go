@@ -1,4 +1,4 @@
-package elevator
+package singleElevator
 
 import (
 	"Driver-go/elevio"
@@ -50,6 +50,6 @@ type Elevator struct {
 	Behaviour      ElevatorBehaviour
 	DoorOpen       bool
 	Operating      WorkingState
-	SingleElevator bool
+	IsAlone bool
 	OrderNumber    int
 }
