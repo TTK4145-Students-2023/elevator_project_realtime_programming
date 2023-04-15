@@ -38,26 +38,3 @@ func HandleNewPeer(newPeer string, database ElevatorDatabase, cabsChannelTx chan
 }
 
 
-/*
-
-if p.New != "" {
-	if !singleElevator.GetIsAlone() {
-		cabsToBeSent := manager.FindCabCallsForElevator(database, p.New)
-		fmt.Println("Ready to send the following CABs:", cabsToBeSent)
-		for k := 0; k < len(cabsToBeSent); k++ {
-			cabsChannelTx <- cabsToBeSent[k]
-			time.Sleep(time.Duration(inputPollRateMs) * time.Millisecond)
-		}
-	}
-
-	if !manager.IsElevatorInDatabase(p.New, database) {
-		database.ElevatorList = append(database.ElevatorList, singleElevator.Elevator{ElevatorID: p.New, Operating: singleElevator.WS_Connected})
-	}
-
-	database = manager.UpdateElevatorNetworkStateInDatabase(p.New, database, singleElevator.WS_Connected)
-	if database.ConnectedElevators > 1 {
-		singleElevator.SetIsAlone(false)
-	}
-
-}
-*/

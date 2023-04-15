@@ -19,16 +19,12 @@ const nFloors = 4
 //const nButtons = 3
 
 func main() {
-	// Our id can be anything. Here we pass it on the command line, using
-	//  `go run main.go -id=our_id`
+	
 
 	var id string
 	flag.StringVar(&id, "id", "", "id of this peer")
 	flag.Parse()
 
-	// ... or alternatively, we can use the local IP address.
-	// (But since we can run multiple programs on the same PC, we also append the
-	//  process ID)
 	if id == "" {
 		localIP, err := localip.LocalIP()
 		if err != nil {
@@ -38,40 +34,21 @@ func main() {
 		id = fmt.Sprintf("peer-%s-%d", localIP, os.Getpid())
 	}
 
-	// We make a channel for receiving updates on the id's of the peers that are
-	//  alive on the network
-	peerUpdateCh := make(chan peers.PeerUpdate)
-	// We can disable/enable the transmitter after it has been started.
-	// This could be used to signal that we are somehow "unavailable".
-	peerTxEnable := make(chan bool)
 
+	peerUpdateCh := make(chan peers.PeerUpdate)
+	peerTxEnable := make(chan bool)
+	
 	go peers.Transmitter(15600, id, peerTxEnable) //15647
 	go peers.Receiver(15600, peerUpdateCh)
 
 	cabsChannelTx := make(chan manager.OrderStruct)
 	cabsChannelRx := make(chan manager.OrderStruct)
-
-	stateUpdateTx := make(chan singleElevator.ElevatorUpdateToDatabase)
-	stateUpdateRx := make(chan singleElevator.ElevatorUpdateToDatabase)
-
+	stateUpdateTx := make(chan singleElevator.ElevatorStateUpdate)
+	stateUpdateRx := make(chan singleElevator.ElevatorStateUpdate)
+	
 	go bcast.Transmitter(16569, cabsChannelTx, stateUpdateTx)
-	go bcast.Receiver(16569, cabsChannelRx, stateUpdateRx)
-	//port: 16569
-
-	fmt.Println("Started!")
-
-	database := manager.ElevatorDatabase{
-		ConnectedElevators: 0,
-	}
-
-	doorTimer := time.NewTimer(3 * time.Second)
-	doorTimer.Stop()
-
-	immobilityTimer := time.NewTimer(3 * time.Second)
-	immobilityTimer.Stop()
-
-	inputPollRateMs := 25
-
+	go bcast.Receiver(16569, cabsChannelRx, stateUpdateRx)  //port: 16569
+	
 	elevio.Init("localhost:"+id, nFloors) //endre denne for å bruke flere sockets for elevcd //15657
 
 	drv_buttons := make(chan elevio.ButtonEvent)
@@ -88,7 +65,23 @@ func main() {
 		singleElevator.Fsm_onInitBetweenFloors()
 	}
 
-	go singleElevator.SendElevatorToDatabase(stateUpdateTx) //TransmitStateUpdate
+
+	database := manager.ElevatorDatabase{
+		ConnectedElevators: 0,
+	}
+	
+	doorTimer := time.NewTimer(3 * time.Second)
+	doorTimer.Stop()
+	
+	immobilityTimer := time.NewTimer(3 * time.Second)
+	immobilityTimer.Stop()
+	
+	var inputPollRateMs = 25
+	
+
+	go singleElevator.TransmittStateUpdate(stateUpdateTx) //TransmitStateUpdate
+
+
 
 	for {
 

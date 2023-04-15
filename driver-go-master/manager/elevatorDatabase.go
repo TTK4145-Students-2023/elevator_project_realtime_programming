@@ -27,7 +27,6 @@ func UpdateElevatorNetworkStateInDatabase(elevatorID string, database ElevatorDa
 	for i := 0; i < len(database.ElevatorList); i++ {
 		if elevatorID == database.ElevatorList[i].ElevatorID {
 			database.ElevatorList[i].Operating = newState
-			fmt.Println("Her setter jeg operating staten til ", database.ElevatorList[i].ElevatorID, " til ", database.ElevatorList[i].Operating)
 			if newState == singleElevator.WS_Unconnected {
 				database.ConnectedElevators--
 			} else if newState == singleElevator.WS_Connected {
@@ -51,7 +50,7 @@ func UpdateDatabaseWithDeadOrders(deadElevatorID string, immobilityTimer *time.T
 	return database
 }
 
-func UpdateDatabaseFromIncomingMessages(stateUpdateMessage singleElevator.ElevatorUpdateToDatabase, database ElevatorDatabase, immobilityTimer *time.Timer, doorTimer *time.Timer) ElevatorDatabase {
+func UpdateDatabaseFromIncomingMessages(stateUpdateMessage singleElevator.ElevatorStateUpdate, database ElevatorDatabase, immobilityTimer *time.Timer, doorTimer *time.Timer) ElevatorDatabase {
 	database = UpdateDatabase(stateUpdateMessage.Elevator, database)
 
 	newChangedOrders := SearchMessageForOrderUpdate(stateUpdateMessage, database)
@@ -83,7 +82,7 @@ func HandleRestoredCabs(newCabs OrderStruct, doorTimer *time.Timer, immobilityTi
 	return newElevatorUpdate
 }
 
-func SearchMessageForOrderUpdate(stateUpdateMessage singleElevator.ElevatorUpdateToDatabase, database ElevatorDatabase) []OrderStruct {
+func SearchMessageForOrderUpdate(stateUpdateMessage singleElevator.ElevatorStateUpdate, database ElevatorDatabase) []OrderStruct {
 
 	var newChangedOrders []OrderStruct
 

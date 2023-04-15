@@ -7,8 +7,6 @@ import (
 	"time"
 )
 
-
-
 func HandleNewFloorAndUpdateDatabase(floor int, database manager.ElevatorDatabase, doorTimer *time.Timer, immobilityTimer *time.Timer) manager.ElevatorDatabase {
 	newElevatorUpdate := singleElevator.Fsm_onFloorArrival(floor, doorTimer, immobilityTimer)
 	database = manager.UpdateDatabase(newElevatorUpdate, database)
@@ -39,8 +37,3 @@ func HandleStopButton(database manager.ElevatorDatabase) {
 		singleElevator.ElevatorPrint(database.ElevatorList[i])
 	}
 }
-
-
-
-
-
