@@ -1,4 +1,4 @@
-package peerUpdateHandler
+package connectionHandler
 
 import (
 	"Driver-go/databaseHandler"
@@ -6,6 +6,9 @@ import (
 	"Driver-go/singleElevator"
 	"time"
 )
+
+//Function for sending and restoring cabcalls for elevator that have lost connection to the network.
+//Uses broadcast to transmit cabcalls over the network from another elevator.
 
 func SendCabCalls(cabsToBeSent []databaseHandler.OrderStruct, cabsChannelTx chan databaseHandler.OrderStruct) {
 	for k := 0; k < len(cabsToBeSent); k++ {
@@ -19,11 +22,11 @@ func FindCabCallsForElevator(database databaseHandler.ElevatorDatabase, newPeer 
 	for i := 0; i < len(database.ElevatorList); i++ {
 		if database.ElevatorList[i].ElevatorID == newPeer && newPeer != singleElevator.MyID {
 			for floor := 0; floor < singleElevator.NumFloors; floor++ {
-				if database.ElevatorList[i].Requests[floor][elevatorHardware.BT_Cab].ElevatorID == newPeer {
+				if database.ElevatorList[i].Requests[floor][elevatorHardware.BT_Cab].AssingedElevatorID == newPeer {
 					var button elevatorHardware.ButtonEvent
 					button.Floor = floor
 					button.Button = elevatorHardware.BT_Cab
-					panelPair := singleElevator.OrderpanelPair{ElevatorID: newPeer, OrderState: singleElevator.ConfirmedOrder}
+					panelPair := singleElevator.StateAndChosenElevator{AssingedElevatorID: newPeer, OrderState: singleElevator.ConfirmedOrder}
 					cabsToBeSent = append(cabsToBeSent, databaseHandler.MakeOrder(panelPair, button))
 				}
 			}
@@ -33,9 +36,9 @@ func FindCabCallsForElevator(database databaseHandler.ElevatorDatabase, newPeer 
 }
 
 func HandleRestoredCabs(newCabs databaseHandler.OrderStruct, doorTimer *time.Timer, immobilityTimer *time.Timer) singleElevator.Elevator {
-	var newElevatorUpdate singleElevator.Elevator
-	if databaseHandler.MessageIDEqualsMyID(newCabs.PanelPair.ElevatorID) {
-		newElevatorUpdate = singleElevator.ExecuteAssignedOrder(newCabs.OrderedButton, singleElevator.MyID, doorTimer, immobilityTimer)
+	var newStateUpdate singleElevator.Elevator
+	if databaseHandler.MessageIDEqualsMyID(newCabs.PanelPair.AssingedElevatorID) {
+		newStateUpdate = singleElevator.ExecuteAssignedOrder(newCabs.OrderedButton, singleElevator.MyID, doorTimer, immobilityTimer)
 	}
-	return newElevatorUpdate
+	return newStateUpdate
 }

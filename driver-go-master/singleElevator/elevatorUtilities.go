@@ -5,7 +5,9 @@ import (
 	"fmt"
 )
 
-func MakeUnitintializedElevator(myID string) Elevator {
+//Set functions and get functions for the elevator. Also print utilities.
+
+func MakeElevatorObject(myID string) Elevator {
 	elevator := Elevator{Floor: -10}
 	elevator.Behaviour = Idle
 	elevator.Direction = elevatorHardware.MD_Stop
@@ -28,9 +30,7 @@ func SetAllLights(es Elevator) {
 	}
 }
 
-func GetSingleEleavtorObject() Elevator {
-	return elevatorObject
-}
+
 
 func IsDoorOpen() bool {
 	var doorOpen = false
@@ -83,7 +83,7 @@ func DirectionToString(direction elevatorHardware.MotorDirection) string {
 
 func ElevatorPrint(es Elevator) {
 	fmt.Println("  +--------------------+")
-	fmt.Printf("  |ID = %-2d         |\n", es.ElevatorID)
+	fmt.Printf("  |ID = %-12.12s         |\n", es.ElevatorID)
 	fmt.Printf("  |floor = %-2d         |\n", es.Floor)
 	fmt.Printf("  |Direction  = %-12.12s|\n", DirectionToString(es.Direction))
 	fmt.Printf("  |behav = %-12.12s|\n", ebToString(es.Behaviour))

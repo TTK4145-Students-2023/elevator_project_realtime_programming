@@ -5,7 +5,10 @@ import (
 	"Driver-go/singleElevator"
 )
 
-func FindChangesBetweenIncomingmessageAndLocalDatabase(stateUpdateMessage singleElevator.ElevatorStateUpdate, database ElevatorDatabase) []OrderStruct { // comparemessagewithlocaldatabase
+//Functions to analyze incoming stateUpdateMessages from other elevators. 
+//Used to find differences in order states between local database and incoming message.
+
+func FindChangesBetweenIncomingMessageAndLocalDatabase(stateUpdateMessage singleElevator.ElevatorStateUpdate, database ElevatorDatabase) []OrderStruct { // comparemessagewithlocaldatabase
 
 	var DifferencesFound []OrderStruct
 
@@ -21,8 +24,8 @@ func FindChangesBetweenIncomingmessageAndLocalDatabase(stateUpdateMessage single
 			receivedOrderState := stateUpdateMessage.Elevator.Requests[floor][button].OrderState
 			localOrderState := localElevator.Requests[floor][button].OrderState
 
-			receivedRequestID := stateUpdateMessage.Elevator.Requests[floor][button].ElevatorID
-			localRequestID := localElevator.Requests[floor][button].ElevatorID
+			receivedRequestID := stateUpdateMessage.Elevator.Requests[floor][button].AssingedElevatorID
+			localRequestID := localElevator.Requests[floor][button].AssingedElevatorID
 
 			if receivedOrderState != localOrderState {
 				DifferencesFound = CompareIncomningOrderStateAndLocalOrderState(receivedElevatorID, currentButtonEvent, receivedOrderState, localOrderState, receivedRequestID, localRequestID)
@@ -43,30 +46,30 @@ func CompareIncomningOrderStateAndLocalOrderState(receivedElevatorID string, cur
 		if localRequestID == receivedElevatorID &&
 			localOrderState == singleElevator.ConfirmedOrder {
 
-			panelPair := singleElevator.OrderpanelPair{ElevatorID: receivedElevatorID, OrderState: singleElevator.NoOrder}
+			panelPair := singleElevator.StateAndChosenElevator{AssingedElevatorID: receivedElevatorID, OrderState: singleElevator.NoOrder}
 			DifferencesFound = append(DifferencesFound, MakeOrder(panelPair, currentButtonEvent))
 
 		} else if localRequestID == receivedElevatorID &&
 			localOrderState == singleElevator.NewOrder {
 
-			panelPair := singleElevator.OrderpanelPair{ElevatorID: receivedElevatorID, OrderState: singleElevator.NoOrder}
+			panelPair := singleElevator.StateAndChosenElevator{AssingedElevatorID: receivedElevatorID, OrderState: singleElevator.NoOrder}
 			DifferencesFound = append(DifferencesFound, MakeOrder(panelPair, currentButtonEvent))
 
 		}
 	} else if receivedOrderState == singleElevator.NewOrder {
 
 		if receivedRequestID == localElevatorID {
-			panelPair := singleElevator.OrderpanelPair{ElevatorID: localElevatorID, OrderState: singleElevator.ConfirmedOrder}
+			panelPair := singleElevator.StateAndChosenElevator{AssingedElevatorID: localElevatorID, OrderState: singleElevator.ConfirmedOrder}
 			DifferencesFound = append(DifferencesFound, MakeOrder(panelPair, currentButtonEvent))
 
 		} else {
-			panelPair := singleElevator.OrderpanelPair{ElevatorID: receivedElevatorID, OrderState: singleElevator.NewOrder}
+			panelPair := singleElevator.StateAndChosenElevator{AssingedElevatorID: receivedElevatorID, OrderState: singleElevator.NewOrder}
 			DifferencesFound = append(DifferencesFound, MakeOrder(panelPair, currentButtonEvent))
 		}
 	} else if receivedOrderState == singleElevator.ConfirmedOrder {
 
 		if receivedRequestID == receivedElevatorID {
-			panelPair := singleElevator.OrderpanelPair{ElevatorID: receivedElevatorID, OrderState: singleElevator.ConfirmedOrder}
+			panelPair := singleElevator.StateAndChosenElevator{AssingedElevatorID: receivedElevatorID, OrderState: singleElevator.ConfirmedOrder}
 			DifferencesFound = append(DifferencesFound, MakeOrder(panelPair, currentButtonEvent))
 
 		}

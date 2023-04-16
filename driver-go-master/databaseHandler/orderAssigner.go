@@ -6,6 +6,9 @@ import (
 	"math"
 )
 
+//Contains constants for cost calculation and functions for assigning orders based on database information and calculated cost.
+//Contains struct and make functions for holding order information.
+
 const (
 	baseCost            = 10.0
 	ratePerUnitDistance = 0.5
@@ -18,12 +21,12 @@ const (
 type OrderStruct struct {
 	ElevatorID    string
 	OrderedButton elevatorHardware.ButtonEvent
-	PanelPair     singleElevator.OrderpanelPair
+	PanelPair     singleElevator.StateAndChosenElevator
 }
 
 
 
-func MakeOrder(panelPair singleElevator.OrderpanelPair, button elevatorHardware.ButtonEvent) OrderStruct {
+func MakeOrder(panelPair singleElevator.StateAndChosenElevator, button elevatorHardware.ButtonEvent) OrderStruct {
 	order := OrderStruct{
 		ElevatorID:    singleElevator.MyID,
 		OrderedButton: button,

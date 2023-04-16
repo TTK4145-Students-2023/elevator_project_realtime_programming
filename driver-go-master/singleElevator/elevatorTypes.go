@@ -4,8 +4,12 @@ import (
 	"Driver-go/elevatorHardware"
 )
 
+
+//Structs used for holding information about the elevator's physical position and working state. 
+//Also contains the struct for holding information about the orders assigned elevator and order state.
 const NumFloors = 4
 const NumButtons = 3
+
 
 type ElevatorBehaviour int
 
@@ -37,22 +41,19 @@ type DirectionBehaviourPair struct {
 	behaviour ElevatorBehaviour
 }
 
-type OrderpanelPair struct {
-	OrderState StateOfOrder
-	ElevatorID string
+
+type StateAndChosenElevator struct {
+	OrderState           StateOfOrder
+	AssingedElevatorID   string
 }
 
 type Elevator struct {
 	Floor      int
 	ElevatorID string
 	Direction  elevatorHardware.MotorDirection
-	Requests   [NumFloors][NumButtons]OrderpanelPair
+	Requests   [NumFloors][NumButtons]StateAndChosenElevator
 	Behaviour  ElevatorBehaviour
 	Operating  WorkingState
 	IsAlone    bool
 }
 
-type ElevatorStateUpdate struct {
-	ElevatorID string
-	Elevator   Elevator
-}

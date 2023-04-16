@@ -1,12 +1,12 @@
 package main
 
 import (
+	"Driver-go/connectionHandler"
 	"Driver-go/databaseHandler"
 	"Driver-go/elevatorHardware"
 	"Driver-go/network/bcast"
 	"Driver-go/network/localip"
 	"Driver-go/network/peers"
-	"Driver-go/peerUpdateHandler"
 	"Driver-go/singleElevator"
 	"flag"
 	"fmt"
@@ -46,9 +46,7 @@ func main() {
 
 	elevatorHardware.Init("localhost:"+id, nFloors)
 
-	if elevatorHardware.GetFloor() == -1 {
-		singleElevator.InitializeElevatorBetweenFloors()
-	}
+	singleElevator.InitializeIfElevatorBetweenFloors()
 
 	//network init
 	peerUpdateChannel := make(chan peers.PeerUpdate)
@@ -99,7 +97,7 @@ func main() {
 			}
 
 		case restoredCabs := <-restoredCabsChannelRx:
-			newDatabaseEntry := peerUpdateHandler.HandleRestoredCabs(restoredCabs, doorTimer, immobilityTimer)
+			newDatabaseEntry := connectionHandler.HandleRestoredCabs(restoredCabs, doorTimer, immobilityTimer)
 			database = databaseHandler.UpdateDatabase(newDatabaseEntry, database)
 
 		case peerUpdateInfo := <-peerUpdateChannel:
@@ -107,18 +105,18 @@ func main() {
 			newPeer := peerUpdateInfo.New
 
 			if len(lostPeers) != 0 {
-				database = peerUpdateHandler.HandlePeerLoss(lostPeers, database, immobilityTimer, doorTimer)
+				database = connectionHandler.HandleDisconnectedPeer(lostPeers, database, immobilityTimer, doorTimer)
 			}
 
 			if newPeer != "" {
-				database = peerUpdateHandler.HandleNewPeer(newPeer, database, restoredCabsChannelTx)
+				database = connectionHandler.HandleReconnectedPeer(newPeer, database, restoredCabsChannelTx)
 			}
 
 		case <-doorTimer.C:
 			singleElevator.DoorTimeout(doorTimer)
 
 		case <-immobilityTimer.C:
-			database = databaseHandler.UpdateElevatorNetworkStateInDatabase(singleElevator.MyID, database, singleElevator.Immobile)
+			database = databaseHandler.UpdateElevatorNetworkStateInDatabase(singleElevator.Immobile, singleElevator.MyID, database)
 
 			database = databaseHandler.UpdateDatabaseWithDeadOrders(singleElevator.MyID, immobilityTimer, doorTimer, database)
 
