@@ -1,8 +1,7 @@
-package peerStatus
+package peerUpdateHandler
 
 import (
 	"Driver-go/databaseHandler"
-	"Driver-go/orderDelegation"
 	"Driver-go/singleElevator"
 	"time"
 )
@@ -24,8 +23,8 @@ func HandlePeerLoss(lostPeers []string, database databaseHandler.ElevatorDatabas
 
 func HandleNewPeer(newPeer string, database databaseHandler.ElevatorDatabase, cabsChannelTx chan databaseHandler.OrderStruct) databaseHandler.ElevatorDatabase {
 	if !singleElevator.GetIsAlone() {
-		cabsToBeSent := orderDelegation.FindCabCallsForElevator(database, newPeer)
-		orderDelegation.SendCabCalls(cabsToBeSent, cabsChannelTx)
+		cabsToBeSent := FindCabCallsForElevator(database, newPeer)
+		SendCabCalls(cabsToBeSent, cabsChannelTx)
 	}
 
 	if !databaseHandler.IsElevatorInDatabase(newPeer, database) {

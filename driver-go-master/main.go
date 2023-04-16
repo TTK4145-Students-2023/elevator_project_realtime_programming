@@ -3,12 +3,10 @@ package main
 import (
 	"Driver-go/databaseHandler"
 	"Driver-go/elevatorHardware"
-	"Driver-go/elevatorInterface"
 	"Driver-go/network/bcast"
 	"Driver-go/network/localip"
 	"Driver-go/network/peers"
-	"Driver-go/orderDelegation"
-	"Driver-go/peerStatus"
+	"Driver-go/peerUpdateHandler"
 	"Driver-go/singleElevator"
 	"flag"
 	"fmt"
@@ -23,7 +21,6 @@ const inputPollRateMs = 25
 func main() {
 
 	//hardware channel init
-	
 
 	buttonChannel := make(chan elevatorHardware.ButtonEvent)
 	floorSensorChannel := make(chan int)
@@ -33,8 +30,7 @@ func main() {
 	go elevatorHardware.PollFloorSensor(floorSensorChannel)
 	go elevatorHardware.PollObstructionSwitch(obstructionChannel)
 
-	
-	//network init
+	//tcp connection init
 	var id string
 	flag.StringVar(&id, "id", "", "id of this peer")
 	flag.Parse()
@@ -48,30 +44,30 @@ func main() {
 		id = fmt.Sprintf("peer-%s-%d", localIP, os.Getpid())
 	}
 
-	elevatorHardware.Init("localhost:"+id, nFloors) 
-	
+	elevatorHardware.Init("localhost:"+id, nFloors)
+
 	if elevatorHardware.GetFloor() == -1 {
-		singleElevator.Fsm_onInitBetweenFloors()
+		singleElevator.InitializeElevatorBetweenFloors()
 	}
 
-
-	peerUpdateCh := make(chan peers.PeerUpdate)
+	//network init
+	peerUpdateChannel := make(chan peers.PeerUpdate)
 	peerTxEnable := make(chan bool)
 
 	go peers.Transmitter(15600, id, peerTxEnable) //15647
-	go peers.Receiver(15600, peerUpdateCh)
+	go peers.Receiver(15600, peerUpdateChannel)
 
 	restoredCabsChannelRx := make(chan databaseHandler.OrderStruct)
 	restoredCabsChannelTx := make(chan databaseHandler.OrderStruct)
-	stateUpdateTx := make(chan singleElevator.ElevatorStateUpdate)
-	stateUpdateRx := make(chan singleElevator.ElevatorStateUpdate)
+	stateUpdateChannelTx := make(chan singleElevator.ElevatorStateUpdate)
+	stateUpdateChannelRx := make(chan singleElevator.ElevatorStateUpdate)
 
-	go bcast.Transmitter(16569, restoredCabsChannelTx, stateUpdateTx)
-	go bcast.Receiver(16569, restoredCabsChannelRx, stateUpdateRx) //port: 16569
+	go bcast.Transmitter(16569, restoredCabsChannelTx, stateUpdateChannelTx)
+	go bcast.Receiver(16569, restoredCabsChannelRx, stateUpdateChannelRx) //port: 16569
 
 	//endre denne for å bruke flere sockets for elevcd //15657
 
-	go singleElevator.TransmitStateUpdate(stateUpdateTx)
+	go singleElevator.TransmitStateUpdate(stateUpdateChannelTx)
 
 	//database init
 	database := databaseHandler.ElevatorDatabase{
@@ -89,33 +85,33 @@ func main() {
 
 		select {
 		case floor := <-floorSensorChannel:
-			database = elevatorInterface.HandleNewFloorAndUpdateDatabase(floor, database, doorTimer, immobilityTimer)
+			database = databaseHandler.HandleNewFloorAndUpdateDatabase(floor, database, doorTimer, immobilityTimer)
 
 		case button := <-buttonChannel:
-			database = elevatorInterface.HandleNewButtonAndUpdateDatabase(button, database, doorTimer, immobilityTimer)
+			database = databaseHandler.HandleNewButtonAndUpdateDatabase(button, database, doorTimer, immobilityTimer)
 
 		case obstruction := <-obstructionChannel:
-			elevatorInterface.HandleObstruction(obstruction, doorTimer, immobilityTimer)
+			singleElevator.HandleObstruction(obstruction, doorTimer, immobilityTimer)
 
-		case stateUpdateMessage := <-stateUpdateRx:
+		case stateUpdateMessage := <-stateUpdateChannelRx:
 			if !databaseHandler.MessageIDEqualsMyID(stateUpdateMessage.ElevatorID) {
 				database = databaseHandler.UpdateDatabaseFromIncomingMessages(stateUpdateMessage, database, immobilityTimer, doorTimer)
 			}
 
 		case restoredCabs := <-restoredCabsChannelRx:
-			newDatabaseEntry := orderDelegation.HandleRestoredCabs(restoredCabs, doorTimer, immobilityTimer)
+			newDatabaseEntry := peerUpdateHandler.HandleRestoredCabs(restoredCabs, doorTimer, immobilityTimer)
 			database = databaseHandler.UpdateDatabase(newDatabaseEntry, database)
 
-		case peerUpdateInfo := <-peerUpdateCh:
+		case peerUpdateInfo := <-peerUpdateChannel:
 			lostPeers := peerUpdateInfo.Lost
 			newPeer := peerUpdateInfo.New
 
 			if len(lostPeers) != 0 {
-				database = peerStatus.HandlePeerLoss(lostPeers, database, immobilityTimer, doorTimer)
+				database = peerUpdateHandler.HandlePeerLoss(lostPeers, database, immobilityTimer, doorTimer)
 			}
 
 			if newPeer != "" {
-				database = peerStatus.HandleNewPeer(newPeer, database, restoredCabsChannelTx)
+				database = peerUpdateHandler.HandleNewPeer(newPeer, database, restoredCabsChannelTx)
 			}
 
 		case <-doorTimer.C:

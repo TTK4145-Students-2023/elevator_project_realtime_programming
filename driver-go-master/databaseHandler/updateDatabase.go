@@ -33,8 +33,7 @@ func UpdateElevatorNetworkStateInDatabase(elevatorID string, database ElevatorDa
 }
 
 func UpdateDatabaseWithDeadOrders(deadElevatorID string, immobilityTimer *time.Timer, doorTimer *time.Timer, database ElevatorDatabase) ElevatorDatabase {
-	var deadOrders []elevatorHardware.ButtonEvent
-	deadOrders = FindDeadOrders(database, deadElevatorID)
+	deadOrders := FindDeadOrders(database, deadElevatorID)
 	for j := 0; j < len(deadOrders); j++ {
 		chosenElevator := AssignOrderToElevator(database, deadOrders[j])
 		newElevatorUpdate := singleElevator.HandleNewOrder(chosenElevator, deadOrders[j], doorTimer, immobilityTimer)
@@ -53,18 +52,31 @@ func UpdateDatabaseFromIncomingMessages(stateUpdateMessage singleElevator.Elevat
 		var newDatabaseEntry singleElevator.Elevator
 		stateOfOrderDifference := orderDifference.PanelPair.OrderState
 
-		if stateOfOrderDifference == singleElevator.Confirmed { //dårlig navn
+		if stateOfOrderDifference == singleElevator.ConfirmedOrder { //Dårlig navn
 			chosenElevator := orderDifference.PanelPair.ElevatorID
 			newButton := orderDifference.OrderedButton
 
 			newDatabaseEntry = singleElevator.HandleConfirmedOrder(chosenElevator, newButton, doorTimer, immobilityTimer)
 
 		} else if orderDifference.PanelPair.OrderState == singleElevator.NoOrder {
-			newDatabaseEntry = singleElevator.Requests_clearOnFloor(orderDifference.PanelPair.ElevatorID, orderDifference.OrderedButton.Floor)
+			newDatabaseEntry = singleElevator.ClearOrderAtThisFloor(orderDifference.PanelPair.ElevatorID, orderDifference.OrderedButton.Floor)
 		}
 
 		database = UpdateDatabase(newDatabaseEntry, database)
 	}
 	return database
 
+}
+
+func HandleNewFloorAndUpdateDatabase(floor int, database ElevatorDatabase, doorTimer *time.Timer, immobilityTimer *time.Timer) ElevatorDatabase {
+	newDatabaseEntry := singleElevator.FloorArrival(floor, doorTimer, immobilityTimer)
+	database = UpdateDatabase(newDatabaseEntry, database)
+	return database
+}
+
+func HandleNewButtonAndUpdateDatabase(button elevatorHardware.ButtonEvent, database ElevatorDatabase, doorTimer *time.Timer, immobilityTimer *time.Timer) ElevatorDatabase {
+	chosenElevator := AssignOrderToElevator(database, button)
+	newDatabaseEntry := singleElevator.HandleNewOrder(chosenElevator, button, doorTimer, immobilityTimer)
+	database = UpdateDatabase(newDatabaseEntry, database)
+	return database
 }

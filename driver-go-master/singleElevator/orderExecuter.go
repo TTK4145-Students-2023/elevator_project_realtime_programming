@@ -5,35 +5,25 @@ import (
 	"time"
 )
 
-func TransmitStateUpdate(stateUpdateTx chan ElevatorStateUpdate) {
-	ElevatorUpdate := ElevatorStateUpdate{
-		ElevatorID: elevatorObject.ElevatorID,
-		Elevator:   elevatorObject}
-	for {
-		time.Sleep(200 * time.Millisecond)
-		ElevatorUpdate.Elevator = elevatorObject
-		stateUpdateTx <- ElevatorUpdate
-	}
-}
+func ExecuteAssignedOrder(button elevatorHardware.ButtonEvent, chosenElevator string, doorTimer *time.Timer, immobilityTimer *time.Timer) Elevator {
 
-func ExecuteAssignedOrder(btnFloor int, btnType elevatorHardware.ButtonType, chosenElevator string, doorTimer *time.Timer, immobilityTimer *time.Timer) Elevator {
 	switch elevatorObject.Behaviour {
 	case DoorOpen:
-		if Requests_shouldClearImmediately(elevatorObject, btnFloor, btnType) {
-			elevatorObject = Requests_clearAtCurrentFloor(elevatorObject)
-			elevatorObject = Requests_clearOnFloor(elevatorObject.ElevatorID, elevatorObject.Floor)
+		if OrderShouldClearImmediately(elevatorObject, button.Floor, button.Button) {
+			elevatorObject = ClearOrderAtCurrentFloor(elevatorObject)
+			elevatorObject = ClearOrderAtThisFloor(elevatorObject.ElevatorID, elevatorObject.Floor)
 			doorTimer.Reset(3 * time.Second)
 		} else {
-			elevatorObject = setConfirmedOrder(elevatorObject, btnFloor, btnType, chosenElevator)
+			elevatorObject = setLocalConfirmedOrder(button, chosenElevator)
 		}
 	case Moving:
 		immobilityTimer.Reset(3 * time.Second)
-		elevatorObject = setConfirmedOrder(elevatorObject, btnFloor, btnType, chosenElevator)
+		elevatorObject = setLocalConfirmedOrder(button, chosenElevator)
 
 	case Idle:
-		elevatorObject = setConfirmedOrder(elevatorObject, btnFloor, btnType, chosenElevator)
+		elevatorObject = setLocalConfirmedOrder(button, chosenElevator)
 
-		directionBehaviourPair := Requests_chooseDirection(elevatorObject)
+		directionBehaviourPair := ordersChooseDirection(elevatorObject)
 		elevatorObject.Direction = directionBehaviourPair.direction
 		elevatorObject.Behaviour = directionBehaviourPair.behaviour
 
@@ -41,7 +31,7 @@ func ExecuteAssignedOrder(btnFloor int, btnType elevatorHardware.ButtonType, cho
 		case DoorOpen:
 			elevatorHardware.SetDoorOpenLamp(true)
 			doorTimer.Reset(3 * time.Second)
-			elevatorObject = Requests_clearAtCurrentFloor(elevatorObject)
+			elevatorObject = ClearOrderAtCurrentFloor(elevatorObject)
 
 		case Moving:
 			immobilityTimer.Reset(3 * time.Second)
@@ -59,7 +49,7 @@ func HandleNewOrder(chosenElevator string, button elevatorHardware.ButtonEvent, 
 	var newElevatorUpdate Elevator
 
 	if chosenElevator == MyID {
-		newElevatorUpdate = ExecuteAssignedOrder(button.Floor, button.Button, chosenElevator, doorTimer, immobilityTimer)
+		newElevatorUpdate = ExecuteAssignedOrder(button, chosenElevator, doorTimer, immobilityTimer)
 	} else {
 		newElevatorUpdate = setLocalNewOrder(button, chosenElevator)
 	}
@@ -71,10 +61,30 @@ func HandleConfirmedOrder(chosenElevator string, button elevatorHardware.ButtonE
 	var newElevatorUpdate Elevator
 
 	if chosenElevator == MyID {
-		newElevatorUpdate = ExecuteAssignedOrder(button.Floor, button.Button, chosenElevator, doorTimer, immobilityTimer)
+		newElevatorUpdate = ExecuteAssignedOrder(button, chosenElevator, doorTimer, immobilityTimer)
 	} else {
 		newElevatorUpdate = setLocalConfirmedOrder(button, chosenElevator) //endre navn mer deskrriptivt
 	}
 
 	return newElevatorUpdate
+}
+
+func setLocalNewOrder(button elevatorHardware.ButtonEvent, chosenElevator string) Elevator {
+	elevatorObject.Requests[button.Floor][button.Button].OrderState = NewOrder
+	elevatorObject.Requests[button.Floor][button.Button].ElevatorID = chosenElevator
+	return elevatorObject
+}
+
+func setLocalNoOrder(floor int, buttonType elevatorHardware.ButtonType) Elevator {
+	elevatorObject.Requests[floor][buttonType].OrderState = NoOrder
+	elevatorObject.Requests[floor][buttonType].ElevatorID = ""
+	return elevatorObject
+}
+
+
+func setLocalConfirmedOrder(button elevatorHardware.ButtonEvent, chosenElevator string) Elevator {
+	elevatorObject.Requests[button.Floor][button.Button].OrderState = ConfirmedOrder
+	elevatorObject.Requests[button.Floor][button.Button].ElevatorID = chosenElevator
+	SetAllLights(elevatorObject)
+	return elevatorObject
 }

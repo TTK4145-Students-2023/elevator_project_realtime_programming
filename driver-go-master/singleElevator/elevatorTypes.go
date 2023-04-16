@@ -29,7 +29,7 @@ type StateOfOrder int
 const (
 	NoOrder = iota
 	NewOrder
-	Confirmed
+	ConfirmedOrder
 )
 
 type DirectionBehaviourPair struct {

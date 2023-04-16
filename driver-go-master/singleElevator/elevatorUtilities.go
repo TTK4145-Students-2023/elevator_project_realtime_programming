@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-func Elevator_uninitialized(myID string) Elevator {
+func MakeUnitintializedElevator(myID string) Elevator {
 	elevator := Elevator{Floor: -10}
 	elevator.Behaviour = Idle
 	elevator.Direction = elevatorHardware.MD_Stop
@@ -19,26 +19,13 @@ func Elevator_uninitialized(myID string) Elevator {
 func SetAllLights(es Elevator) {
 	for floor := 0; floor < NumFloors; floor++ {
 		for btn := elevatorHardware.BT_HallUp; btn < NumButtons; btn++ {
-			if es.Requests[floor][btn].OrderState == Confirmed {
+			if es.Requests[floor][btn].OrderState == ConfirmedOrder {
 				elevatorHardware.SetButtonLamp(btn, floor, true)
 			} else {
 				elevatorHardware.SetButtonLamp(btn, floor, false)
 			}
 		}
 	}
-}
-
-func Fsm_init() {
-	elevatorObject = Elevator_uninitialized(MyID)
-
-	elevatorHardware.SetFloorIndicator(elevatorObject.Floor)
-	SetAllLights(elevatorObject)
-}
-
-func Fsm_onInitBetweenFloors() {
-	elevatorHardware.SetMotorDirection(elevatorHardware.MD_Down)
-	elevatorObject.Direction = elevatorHardware.MD_Down
-	elevatorObject.Behaviour = Moving
 }
 
 func GetSingleEleavtorObject() Elevator {
@@ -66,24 +53,6 @@ func SetWorkingState(state WorkingState) {
 
 func AvailableAtCurrFloor(floor int) bool {
 	return (elevatorObject.Floor == floor) && (elevatorObject.Behaviour == Idle)
-}
-
-func checkNoOrder(elevator Elevator, btn elevatorHardware.ButtonType) bool {
-	return elevator.Requests[elevator.Floor][btn].OrderState == NoOrder
-}
-
-func setNoOrder(e Elevator, floor int, buttonType elevatorHardware.ButtonType) Elevator {
-	temp := e
-	temp.Requests[floor][buttonType].OrderState = NoOrder
-	temp.Requests[floor][buttonType].ElevatorID = ""
-	return temp
-}
-
-func setConfirmedOrder(e Elevator, floor int, buttonType elevatorHardware.ButtonType, chosenElevator string) Elevator {
-	temp := e
-	temp.Requests[floor][buttonType].OrderState = Confirmed
-	temp.Requests[floor][buttonType].ElevatorID = chosenElevator
-	return temp
 }
 
 func ebToString(eb ElevatorBehaviour) string {
@@ -131,17 +100,4 @@ func ElevatorPrint(es Elevator) {
 		fmt.Print("|\n")
 	}
 	fmt.Println("  +--------------------+")
-}
-
-func setLocalNewOrder(button elevatorHardware.ButtonEvent, chosenElevator string) Elevator {
-	elevatorObject.Requests[button.Floor][button.Button].OrderState = NewOrder
-	elevatorObject.Requests[button.Floor][button.Button].ElevatorID = chosenElevator
-	return elevatorObject
-}
-
-func setLocalConfirmedOrder(button elevatorHardware.ButtonEvent, chosenElevator string) Elevator {
-	elevatorObject.Requests[button.Floor][button.Button].OrderState = Confirmed
-	elevatorObject.Requests[button.Floor][button.Button].ElevatorID = chosenElevator
-	SetAllLights(elevatorObject)
-	return elevatorObject
 }

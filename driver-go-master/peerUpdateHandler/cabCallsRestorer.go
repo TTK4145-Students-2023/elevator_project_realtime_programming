@@ -1,4 +1,4 @@
-package orderDelegation
+package peerUpdateHandler
 
 import (
 	"Driver-go/databaseHandler"
@@ -23,7 +23,7 @@ func FindCabCallsForElevator(database databaseHandler.ElevatorDatabase, newPeer 
 					var button elevatorHardware.ButtonEvent
 					button.Floor = floor
 					button.Button = elevatorHardware.BT_Cab
-					panelPair := singleElevator.OrderpanelPair{ElevatorID: newPeer, OrderState: singleElevator.Confirmed}
+					panelPair := singleElevator.OrderpanelPair{ElevatorID: newPeer, OrderState: singleElevator.ConfirmedOrder}
 					cabsToBeSent = append(cabsToBeSent, databaseHandler.MakeOrder(panelPair, button))
 				}
 			}
@@ -35,7 +35,7 @@ func FindCabCallsForElevator(database databaseHandler.ElevatorDatabase, newPeer 
 func HandleRestoredCabs(newCabs databaseHandler.OrderStruct, doorTimer *time.Timer, immobilityTimer *time.Timer) singleElevator.Elevator {
 	var newElevatorUpdate singleElevator.Elevator
 	if databaseHandler.MessageIDEqualsMyID(newCabs.PanelPair.ElevatorID) {
-		newElevatorUpdate = singleElevator.ExecuteAssignedOrder(newCabs.OrderedButton.Floor, newCabs.OrderedButton.Button, singleElevator.MyID, doorTimer, immobilityTimer)
+		newElevatorUpdate = singleElevator.ExecuteAssignedOrder(newCabs.OrderedButton, singleElevator.MyID, doorTimer, immobilityTimer)
 	}
 	return newElevatorUpdate
 }

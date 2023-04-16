@@ -4,10 +4,14 @@ import (
 	"Driver-go/elevatorHardware"
 )
 
-func Requests_above(e Elevator) bool {
+func checkNoOrder(elevator Elevator, btn elevatorHardware.ButtonType) bool {
+	return elevator.Requests[elevator.Floor][btn].OrderState == NoOrder
+}
+
+func ordersAbove(e Elevator) bool {
 	for floor := e.Floor + 1; floor < NumFloors; floor++ {
 		for btn := 0; btn < NumButtons; btn++ {
-			if e.Requests[floor][btn].OrderState == Confirmed &&
+			if e.Requests[floor][btn].OrderState == ConfirmedOrder &&
 				e.Requests[floor][btn].ElevatorID == e.ElevatorID { //Antar at requests har verdi 1 om bestilling og null ellers
 				return true
 			}
@@ -17,10 +21,10 @@ func Requests_above(e Elevator) bool {
 	return false
 }
 
-func Requests_below(e Elevator) bool {
+func ordersBelow(e Elevator) bool {
 	for floor := 0; floor < e.Floor; floor++ {
 		for btn := 0; btn < NumButtons; btn++ {
-			if e.Requests[floor][btn].OrderState == Confirmed &&
+			if e.Requests[floor][btn].OrderState == ConfirmedOrder &&
 				e.Requests[floor][btn].ElevatorID == e.ElevatorID {
 				return true
 			}
@@ -30,10 +34,10 @@ func Requests_below(e Elevator) bool {
 	return false
 }
 
-func Requests_here(e Elevator) bool {
+func orderHere(e Elevator) bool {
 
 	for btn := 0; btn < NumButtons; btn++ {
-		if e.Requests[e.Floor][btn].OrderState == Confirmed &&
+		if e.Requests[e.Floor][btn].OrderState == ConfirmedOrder &&
 			e.Requests[e.Floor][btn].ElevatorID == e.ElevatorID {
 			return true
 		}
@@ -42,34 +46,34 @@ func Requests_here(e Elevator) bool {
 	return false
 }
 
-func Requests_chooseDirection(e Elevator) DirectionBehaviourPair {
+func ordersChooseDirection(e Elevator) DirectionBehaviourPair {
 	switch e.Direction {
 	case elevatorHardware.MD_Up:
-		if Requests_above(e) {
+		if ordersAbove(e) {
 			return DirectionBehaviourPair{elevatorHardware.MD_Up, Moving}
-		} else if Requests_here(e) {
+		} else if orderHere(e) {
 			return DirectionBehaviourPair{elevatorHardware.MD_Down, DoorOpen}
-		} else if Requests_below(e) {
+		} else if ordersBelow(e) {
 			return DirectionBehaviourPair{elevatorHardware.MD_Down, Moving}
 		} else {
 			return DirectionBehaviourPair{elevatorHardware.MD_Stop, Idle}
 		}
 	case elevatorHardware.MD_Down:
-		if Requests_below(e) {
+		if ordersBelow(e) {
 			return DirectionBehaviourPair{elevatorHardware.MD_Down, Moving}
-		} else if Requests_here(e) {
+		} else if orderHere(e) {
 			return DirectionBehaviourPair{elevatorHardware.MD_Up, DoorOpen}
-		} else if Requests_above(e) {
+		} else if ordersAbove(e) {
 			return DirectionBehaviourPair{elevatorHardware.MD_Up, Moving}
 		} else {
 			return DirectionBehaviourPair{elevatorHardware.MD_Stop, Idle}
 		}
 	case elevatorHardware.MD_Stop:
-		if Requests_here(e) {
+		if orderHere(e) {
 			return DirectionBehaviourPair{elevatorHardware.MD_Stop, DoorOpen}
-		} else if Requests_above(e) {
+		} else if ordersAbove(e) {
 			return DirectionBehaviourPair{elevatorHardware.MD_Up, Moving}
-		} else if Requests_below(e) {
+		} else if ordersBelow(e) {
 			return DirectionBehaviourPair{elevatorHardware.MD_Down, Moving}
 		} else {
 			return DirectionBehaviourPair{elevatorHardware.MD_Stop, Idle}
@@ -79,64 +83,64 @@ func Requests_chooseDirection(e Elevator) DirectionBehaviourPair {
 	}
 }
 
-func Requests_shouldStop(e Elevator) bool {
+func elevatorShouldStop(e Elevator) bool {
 	switch e.Direction {
 	case elevatorHardware.MD_Down:
-		return (e.Requests[e.Floor][elevatorHardware.BT_HallDown].OrderState == Confirmed &&
+		return (e.Requests[e.Floor][elevatorHardware.BT_HallDown].OrderState == ConfirmedOrder &&
 			e.Requests[e.Floor][elevatorHardware.BT_HallDown].ElevatorID == e.ElevatorID) ||
-			e.Requests[e.Floor][elevatorHardware.BT_Cab].OrderState == Confirmed ||
-			!Requests_below(e)
+			e.Requests[e.Floor][elevatorHardware.BT_Cab].OrderState == ConfirmedOrder ||
+			!ordersBelow(e)
 
 	case elevatorHardware.MD_Up:
-		return (e.Requests[e.Floor][elevatorHardware.BT_HallUp].OrderState == Confirmed &&
+		return (e.Requests[e.Floor][elevatorHardware.BT_HallUp].OrderState == ConfirmedOrder &&
 			e.Requests[e.Floor][elevatorHardware.BT_HallUp].ElevatorID == e.ElevatorID) ||
-			e.Requests[e.Floor][elevatorHardware.BT_Cab].OrderState == Confirmed ||
-			!Requests_above(e)
+			e.Requests[e.Floor][elevatorHardware.BT_Cab].OrderState == ConfirmedOrder ||
+			!ordersAbove(e)
 
 	default:
 		return true
 	}
 }
 
-func Requests_shouldClearImmediately(e Elevator, btn_floor int, btn_type elevatorHardware.ButtonType) bool {
+func OrderShouldClearImmediately(e Elevator, btn_floor int, btn_type elevatorHardware.ButtonType) bool {
 	return e.Floor == btn_floor &&
 		((e.Direction == elevatorHardware.MD_Up && btn_type == elevatorHardware.BT_HallUp) ||
 			(e.Direction == elevatorHardware.MD_Down && btn_type == elevatorHardware.BT_HallDown) ||
 			e.Direction == elevatorHardware.MD_Stop || btn_type == elevatorHardware.BT_Cab)
 }
 
-func Requests_clearAtCurrentFloor(e Elevator) Elevator {
-	e = setNoOrder(e, e.Floor, elevatorHardware.BT_Cab)
+func ClearOrderAtCurrentFloor(e Elevator) Elevator {
+	e = setLocalNoOrder(e.Floor, elevatorHardware.BT_Cab)
 
 	switch e.Direction {
 	case elevatorHardware.MD_Up:
-		if !Requests_above(e) && checkNoOrder(e, elevatorHardware.BT_HallUp) {
-			e = setNoOrder(e, e.Floor, elevatorHardware.BT_HallDown)
+		if !ordersAbove(e) && checkNoOrder(e, elevatorHardware.BT_HallUp) {
+			e = setLocalNoOrder(e.Floor, elevatorHardware.BT_HallDown)
 		}
-		e = setNoOrder(e, e.Floor, elevatorHardware.BT_HallUp)
+		e = setLocalNoOrder(e.Floor, elevatorHardware.BT_HallUp)
 	case elevatorHardware.MD_Down:
-		if !Requests_below(e) && checkNoOrder(e, elevatorHardware.BT_HallDown) {
-			e = setNoOrder(e, e.Floor, elevatorHardware.BT_HallUp)
+		if !ordersBelow(e) && checkNoOrder(e, elevatorHardware.BT_HallDown) {
+			e = setLocalNoOrder(e.Floor, elevatorHardware.BT_HallUp)
 		}
-		e = setNoOrder(e, e.Floor, elevatorHardware.BT_HallDown)
+		e = setLocalNoOrder(e.Floor, elevatorHardware.BT_HallDown)
 	case elevatorHardware.MD_Stop:
 		fallthrough
 	default:
-		e = setNoOrder(e, e.Floor, elevatorHardware.BT_HallUp)
-		e = setNoOrder(e, e.Floor, elevatorHardware.BT_HallDown)
+		e = setLocalNoOrder(e.Floor, elevatorHardware.BT_HallUp)
+		e = setLocalNoOrder(e.Floor, elevatorHardware.BT_HallDown)
 	}
 	return e
 }
 
-func Requests_clearOnFloor(arrivedElevatorID string, floor int) Elevator {
+func ClearOrderAtThisFloor(arrivedElevatorID string, floor int) Elevator {
 
 	if elevatorObject.Requests[floor][elevatorHardware.BT_HallDown].OrderState != NoOrder &&
 		(arrivedElevatorID == elevatorObject.Requests[floor][elevatorHardware.BT_HallDown].ElevatorID) {
-		elevatorObject = setNoOrder(elevatorObject, floor, elevatorHardware.BT_HallDown)
+		elevatorObject = setLocalNoOrder(floor, elevatorHardware.BT_HallDown)
 
 	} else if elevatorObject.Requests[floor][elevatorHardware.BT_HallUp].OrderState != NoOrder &&
 		(arrivedElevatorID == elevatorObject.Requests[floor][elevatorHardware.BT_HallUp].ElevatorID) {
-		elevatorObject = setNoOrder(elevatorObject, floor, elevatorHardware.BT_HallUp)
+		elevatorObject = setLocalNoOrder(floor, elevatorHardware.BT_HallUp)
 	}
 
 	SetAllLights(elevatorObject)
