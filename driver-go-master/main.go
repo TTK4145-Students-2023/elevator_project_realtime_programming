@@ -1,9 +1,9 @@
 package main
 
 import (
-	"Driver-go/elevatorInterface"
-	"Driver-go/elevio"
-	"Driver-go/manager"
+	"Driver-go/connectionHandler"
+	"Driver-go/databaseHandler"
+	"Driver-go/elevatorHardware"
 	"Driver-go/network/bcast"
 	"Driver-go/network/localip"
 	"Driver-go/network/peers"
@@ -16,11 +16,21 @@ import (
 
 const nFloors = 4
 
-//const nButtons = 3
+const inputPollRateMs = 25
 
 func main() {
-	
 
+	//hardware channel init
+
+	buttonChannel := make(chan elevatorHardware.ButtonEvent)
+	floorSensorChannel := make(chan int)
+	obstructionChannel := make(chan bool)
+
+	go elevatorHardware.PollButtons(buttonChannel)
+	go elevatorHardware.PollFloorSensor(floorSensorChannel)
+	go elevatorHardware.PollObstructionSwitch(obstructionChannel)
+
+	//tcp connection init
 	var id string
 	flag.StringVar(&id, "id", "", "id of this peer")
 	flag.Parse()
@@ -34,96 +44,81 @@ func main() {
 		id = fmt.Sprintf("peer-%s-%d", localIP, os.Getpid())
 	}
 
+	elevatorHardware.Init("localhost:"+id, nFloors)
 
-	peerUpdateCh := make(chan peers.PeerUpdate)
+	singleElevator.InitializeIfElevatorBetweenFloors()
+
+	//network init
+	peerUpdateChannel := make(chan peers.PeerUpdate)
 	peerTxEnable := make(chan bool)
-	
+
 	go peers.Transmitter(15600, id, peerTxEnable) //15647
-	go peers.Receiver(15600, peerUpdateCh)
+	go peers.Receiver(15600, peerUpdateChannel)
 
-	cabsChannelTx := make(chan manager.OrderStruct)
-	cabsChannelRx := make(chan manager.OrderStruct)
-	stateUpdateTx := make(chan singleElevator.ElevatorStateUpdate)
-	stateUpdateRx := make(chan singleElevator.ElevatorStateUpdate)
-	
-	go bcast.Transmitter(16569, cabsChannelTx, stateUpdateTx)
-	go bcast.Receiver(16569, cabsChannelRx, stateUpdateRx)  //port: 16569
-	
-	elevio.Init("localhost:"+id, nFloors) //endre denne for å bruke flere sockets for elevcd //15657
+	restoredCabsChannelRx := make(chan databaseHandler.OrderStruct)
+	restoredCabsChannelTx := make(chan databaseHandler.OrderStruct)
+	stateUpdateChannelTx := make(chan singleElevator.ElevatorStateUpdate)
+	stateUpdateChannelRx := make(chan singleElevator.ElevatorStateUpdate)
 
-	drv_buttons := make(chan elevio.ButtonEvent)
-	drv_floors := make(chan int)
-	drv_obstr := make(chan bool)
-	drv_stop := make(chan bool)
+	go bcast.Transmitter(16569, restoredCabsChannelTx, stateUpdateChannelTx)
+	go bcast.Receiver(16569, restoredCabsChannelRx, stateUpdateChannelRx) //port: 16569
 
-	go elevio.PollButtons(drv_buttons)
-	go elevio.PollFloorSensor(drv_floors)
-	go elevio.PollObstructionSwitch(drv_obstr)
-	go elevio.PollStopButton(drv_stop)
+	//endre denne for å bruke flere sockets for elevcd //15657
 
-	if elevio.GetFloor() == -1 {
-		singleElevator.Fsm_onInitBetweenFloors()
-	}
+	go singleElevator.TransmitStateUpdate(stateUpdateChannelTx)
 
-
-	database := manager.ElevatorDatabase{
+	//database init
+	database := databaseHandler.ElevatorDatabase{
 		ConnectedElevators: 0,
 	}
-	
+
+	//timer init
 	doorTimer := time.NewTimer(3 * time.Second)
 	doorTimer.Stop()
-	
+
 	immobilityTimer := time.NewTimer(3 * time.Second)
 	immobilityTimer.Stop()
-	
-	var inputPollRateMs = 25
-	
-
-	go singleElevator.TransmittStateUpdate(stateUpdateTx) //TransmitStateUpdate
-
-
 
 	for {
 
 		select {
-		case floor := <-drv_floors:
-			database = elevatorInterface.HandleNewFloorAndUpdateDatabase(floor, database, doorTimer, immobilityTimer)
+		case floor := <-floorSensorChannel:
+			database = databaseHandler.HandleNewFloorAndUpdateDatabase(floor, database, doorTimer, immobilityTimer)
 
-		case button := <-drv_buttons:
-			database = elevatorInterface.HandleNewButtonAndUpdateDatabase(button, database, doorTimer, immobilityTimer)
+		case button := <-buttonChannel:
+			database = databaseHandler.HandleNewButtonAndUpdateDatabase(button, database, doorTimer, immobilityTimer)
 
-		case obstruction := <-drv_obstr:
-			elevatorInterface.HandleObstruction(obstruction, doorTimer, immobilityTimer)
+		case obstruction := <-obstructionChannel:
+			singleElevator.HandleObstruction(obstruction, doorTimer, immobilityTimer)
 
-		case <-drv_stop:
-			elevatorInterface.HandleStopButton(database) //Extra print function
+		case stateUpdateMessage := <-stateUpdateChannelRx:
+			if !databaseHandler.MessageIDEqualsMyID(stateUpdateMessage.ElevatorID) {
+				database = databaseHandler.UpdateDatabaseFromIncomingMessages(stateUpdateMessage, database, immobilityTimer, doorTimer)
+			}
+
+		case restoredCabs := <-restoredCabsChannelRx:
+			newDatabaseEntry := connectionHandler.HandleRestoredCabs(restoredCabs, doorTimer, immobilityTimer)
+			database = databaseHandler.UpdateDatabase(newDatabaseEntry, database)
+
+		case peerUpdateInfo := <-peerUpdateChannel:
+			lostPeers := peerUpdateInfo.Lost
+			newPeer := peerUpdateInfo.New
+
+			if len(lostPeers) != 0 {
+				database = connectionHandler.HandleDisconnectedPeer(lostPeers, database, immobilityTimer, doorTimer)
+			}
+
+			if newPeer != "" {
+				database = connectionHandler.HandleReconnectedPeer(newPeer, database, restoredCabsChannelTx)
+			}
 
 		case <-doorTimer.C:
-			singleElevator.Fsm_onDoorTimeout(doorTimer)
+			singleElevator.DoorTimeout(doorTimer)
 
 		case <-immobilityTimer.C:
-			database = manager.UpdateElevatorNetworkStateInDatabase(singleElevator.MyID, database, singleElevator.WS_Immobile)
+			database = databaseHandler.UpdateElevatorNetworkStateInDatabase(singleElevator.Immobile, singleElevator.MyID, database)
 
-			database = manager.UpdateDatabaseWithDeadOrders(singleElevator.MyID, immobilityTimer, doorTimer, database)
-
-		case stateUpdateMessage := <-stateUpdateRx:
-			if !manager.MessageIDEqualsMyID(stateUpdateMessage.ElevatorID) {
-				database = manager.UpdateDatabaseFromIncomingMessages(stateUpdateMessage, database, immobilityTimer, doorTimer)
-			}
-
-		case newCabs := <-cabsChannelRx:
-			newElevatorUpdate := manager.HandleRestoredCabs(newCabs, doorTimer, immobilityTimer)
-			database = manager.UpdateDatabase(newElevatorUpdate, database)
-
-		case p := <-peerUpdateCh:
-
-			if len(p.Lost) != 0 {
-				database = manager.HandlePeerLoss(p.Lost, database, immobilityTimer, doorTimer)
-			}
-
-			if p.New != "" {
-				database = manager.HandleNewPeer(p.New, database, cabsChannelTx)
-			}
+			database = databaseHandler.UpdateDatabaseWithDeadOrders(singleElevator.MyID, immobilityTimer, doorTimer, database)
 
 		}
 

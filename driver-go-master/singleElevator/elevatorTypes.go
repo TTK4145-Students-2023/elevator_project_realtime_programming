@@ -1,55 +1,59 @@
 package singleElevator
 
 import (
-	"Driver-go/elevio"
+	"Driver-go/elevatorHardware"
 )
 
+
+//Structs used for holding information about the elevator's physical position and working state. 
+//Also contains the struct for holding information about the orders assigned elevator and order state.
 const NumFloors = 4
 const NumButtons = 3
+
 
 type ElevatorBehaviour int
 
 const (
-	EB_Idle = iota
-	EB_Moving
-	EB_DoorOpen
-	EB_Undefined
+	Idle = iota
+	Moving
+	DoorOpen
+	Undefined
 )
 
 type WorkingState int
 
 const (
-	WS_Connected = iota
-	WS_Unconnected
-	WS_Immobile
+	Connected = iota
+	Unconnected
+	Immobile
 )
 
 type StateOfOrder int
 
 const (
-	SO_NoOrder = iota
-	SO_NewOrder
-	SO_Confirmed
+	NoOrder = iota
+	NewOrder
+	ConfirmedOrder
 )
 
 type DirectionBehaviourPair struct {
-	direction elevio.MotorDirection
+	direction elevatorHardware.MotorDirection
 	behaviour ElevatorBehaviour
 }
 
-type OrderpanelPair struct {
-	OrderState StateOfOrder
-	ElevatorID string
+
+type StateAndChosenElevator struct {
+	OrderState           StateOfOrder
+	AssingedElevatorID   string
 }
 
 type Elevator struct {
-	Floor          int
-	ElevatorID     string
-	Direction      elevio.MotorDirection
-	Requests       [NumFloors][NumButtons]OrderpanelPair
-	Behaviour      ElevatorBehaviour
-	DoorOpen       bool
-	Operating      WorkingState
-	IsAlone bool
-	OrderNumber    int
+	Floor      int
+	ElevatorID string
+	Direction  elevatorHardware.MotorDirection
+	Requests   [NumFloors][NumButtons]StateAndChosenElevator
+	Behaviour  ElevatorBehaviour
+	Operating  WorkingState
+	IsAlone    bool
 }
+
