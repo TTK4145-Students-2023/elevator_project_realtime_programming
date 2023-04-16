@@ -1,6 +1,6 @@
 Elevator Project
 ================
-This is a program that controls an elevator and lest it communicate with other elevators to collaborate on completing orders. The program contains a database, which holds info about all the elevators in the system. Every elevator uses UDP broadcast to share the the information about itself to the other elevators, which is updated to the database in each program. This lets all the elevators know everything about each other, hence they have the same world view.
+This is a program that controls an elevator and lets it communicate with other elevators to collaborate on completing orders. The program contains a database, which holds information about all the elevators in the system. Every elevator uses UDP broadcast to share the information about itself to the other elevators, which is updated to the database in each program. This lets all the elevators know everything about each other, hence they have the same world view.
 
 An order is received by the buttons being pushed, and information about it is stored in the database. To decide which elevator who should conduct the order, a fleeting master is used. The elvator that receives the button press is the fleeting master, and it delegates the order. This is possible because the fleeting master know everything about the other elevators, and can therefore decide which elevator is best suited to take the order.
 
